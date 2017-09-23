@@ -32,6 +32,14 @@ public class JSONparser {
     private Integer numberOfrows=5;
     private String[] returnArray = new String[numberOfrows+1];
     private String filterFieldName="PID";
+
+    public void setFilterFieldName(String filterFieldName) {
+        this.filterFieldName = filterFieldName;
+    }
+
+    public void setFilterValues(String filterValues) {
+        this.filterValues = filterValues;
+    }
     private String filterValues="00000,00001";
 
     public void setNumberOdRows(Boolean numberOdRows) {
