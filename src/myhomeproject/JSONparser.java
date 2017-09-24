@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -67,11 +68,17 @@ public class JSONparser {
     public String[] jsonToArray() throws IOException {
 
         JSONObject obj = new JSONObject(this.StringFromStream());
-
         JSONArray array = obj.getJSONArray("records");
-
         JSONObject firstRow = array.getJSONObject(0);
         Iterator<String> keySetIter = firstRow.keys();
+        
+        String csvStringValues = "";
+        String[] filterFieldnames = filterFieldName.split(delimiter);
+        Boolean checkResult = Boolean.FALSE;
+        Array returnArrayList;
+        
+        String pid="";
+        Map hmap = new HashMap<String,String>();     
 
         String csvKeysString = "";
         String keySetIternextValue = "";
@@ -96,10 +103,8 @@ public class JSONparser {
         }
 
         returnArray[0] = csvKeysString;
-        String csvStringValues = "";
-        String[] filterFieldnames = filterFieldName.split(delimiter);
-        Boolean checkResult = Boolean.FALSE;
-        Array returnArrayList;
+        hmap.put("csvFieldNames", csvKeysString);
+
 
         for (int i = 0; i < numberOfrows; i++) {
 
@@ -123,7 +128,7 @@ public class JSONparser {
                 // System.out.println(checkedValue);
 
                 for (int p = 0; p < keys.length; p++) {
-
+                    pid=arrayJson.get("PID").toString();
                     csvStringValues = csvStringValues + arrayJson.get(keys[p].toString().trim()).toString();
                     if (p < keys.length - 1) {
                         csvStringValues = csvStringValues + delimiter;
@@ -132,14 +137,18 @@ public class JSONparser {
                 }
             }
 
+            //добавляем в хеш мап не пустые csv строки и ключ hrmid(pid)
             if (csvStringValues.isEmpty() == false) {
-                System.out.println(csvStringValues);
+                System.out.println(pid+": "+csvStringValues);
+                hmap.put(pid, csvStringValues);
+                //System.out.println(csvStringValues);
             }
             returnArray[i + 1] = csvStringValues;
 
             //Сбрасываем все в начальные значения
             csvStringValues = "";
             checkResult = false;
+            pid="";
         }
 
         List<String> list = new ArrayList<String>();
