@@ -32,6 +32,8 @@ public class JSONparser {
     private String[] returnArray = new String[numberOfrows + 1];
     private String filterFieldName = "PID";
     private String filterValues = "00000,00001";
+    private Map jsonMapEMC = new HashMap< String, String>();
+    private Map jsonMapHRM = new HashMap< String, String>();
     
     public void setSourceHRData(String sourceHRData) {
         this.sourceHRData = sourceHRData;
@@ -159,6 +161,7 @@ public class JSONparser {
 
         returnArray = list.toArray(new String[list.size()]);
 
+        jsonMapHRM=hmap;
         return (String[]) returnArray;
     }
 
@@ -254,6 +257,7 @@ public class JSONparser {
             }
         }
         System.out.println(hmap.size());
+        jsonMapEMC=hmap;
         return returnArray;
     }
 
@@ -302,6 +306,8 @@ public class JSONparser {
         k = this.HRMJsonToArray();
         } else {
         k = this.EMCJsonToArray();}
+        
+        
         System.out.println(k.length);
         for (int i = 0; i < k.length; i++) {
             if (k[i] != null) {
@@ -317,22 +323,31 @@ public class JSONparser {
         //json.setFilterValues("*");
         
         JSONparser json = new JSONparser();
-//        
-//      //HRM
-//        json.setSourceHRData("HRM-EMC");
-//        json.setInputJSONFilePath("/home/onekriach/Downloads/work/HRM_json_All_users2.json");
-//        json.setOutputCSVFilePath("/home/onekriach/Downloads/work/HRM_csv_All_users.csv");
-//        json.setFilterFieldName("emailPrimary,emailWork");
-//        json.setFilterValues("anderson.a@itncorp.com,ashton.s@airconcierge.com,caleb.s@itncorp.com,calvin.i@airconcierge.com,cj.g@airconcierge.com,darel.a@itncorp.com,dex.s@airconcierge.com,emma.s@itncorp.com,Felix.n@itncorp.com,gordon.r@itncorp.com,jd.a@asaptickets.com,fred@skyluxtravel.com,cody@skyluxtravel.com,matthew@skyluxtravel.com,jefferson.s@airconcierge.com,kevin.s@itncorp.com,leon.s@itncorp.com,medo.c@asaptickets.com,melvin.a@itncorp.com,mike.h@itncorp.com,mo.b@asaptickets.com,otis.f@airconcierge.com,payton.m@itncorp.com,roger.m@airconcierge.com,roy.v@itncorp.com,sergio.g@itncorp.com,tyrion.i@airconcierge.com,walden.m@airconcierge.com,anete.s@itncorp.com,Mara.p@itncorp.com,derek.j@airconcierge.com,mercedes.z@airconcierge.com,bree.r@airconcierge.com,miguel.p@airconcierge.com,parvesh.k@airconcierge.com,irwin.a@airconcierge.com,molly.m@airconcierge.com,arnold.l@itncorp.com,Larry.r@airconcierge.com,fernando.m@airconcierge.com,sri.k@airconcierge.com,gideon.f@airconcierge.com,patrick.a@airconcierge.com,lauris.e@itncorp.com,robert.b@airconcierge.com,Ralph@skyluxtravel.com,silvester@skyluxtravel.com,tom@skyluxtravel.com,chandler.m@itncorp.com,nicolas.p@itncorp.com,ted.s@itncorp.com,Marcel.M@itncorp.com ,quentin.d@airconcierge.com ,jabez.a@airconcierge.com,steve.g@itncorp.com,justin.b@itncorp.com,adrian.a@itncorp.com,chelsea.a@itncorp.com,rd.o@airconcierge.com,suzie.g@airconcierge.com,asia.a@airconcierge.com,bars.b@airconcierge.com,adam.i@itncorp.com,ramon.p@airconcierge.com,isabel.a@airconcierge.com");
-
-        //EMC
-        json.setSourceHRData("EMC-HRM");
+        json.wholeFile = Boolean.TRUE;
+        
+        
+        json.setSourceHRData("HRM-EMC");//EMC-HRM, EMC, HRM
+        // Если "HRM-EMC" то EMC первый,  если "EMC-HRM" то HRM. 
+        // Если нужны данные только EMC или HRM то оставляем соответствующую секцию другую коментируем)
+ 
+         
+         
+        //--------------- EMC ------------------
+        //json.setSourceHRData("EMC-HRM");
         //json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export_cut.json");
         json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export.json");
         json.setOutputCSVFilePath("/home/onekriach/Downloads/work/EMC_export.csv");
         
+        json.EMCJsonToArray();
         
-        json.wholeFile = Boolean.TRUE;
+        
+        //-------------- HRM ------------------
+        
+        json.setInputJSONFilePath("/home/onekriach/Downloads/work/HRM_json_All_users2.json");
+        json.setOutputCSVFilePath("/home/onekriach/Downloads/work/HRM_csv_All_users.csv");
+        json.setFilterFieldName("emailPrimary,emailWork");
+        json.setFilterValues("anderson.a@itncorp.com,ashton.s@airconcierge.com,caleb.s@itncorp.com,calvin.i@airconcierge.com,cj.g@airconcierge.com,darel.a@itncorp.com,dex.s@airconcierge.com,emma.s@itncorp.com,Felix.n@itncorp.com,gordon.r@itncorp.com,jd.a@asaptickets.com,fred@skyluxtravel.com,cody@skyluxtravel.com,matthew@skyluxtravel.com,jefferson.s@airconcierge.com,kevin.s@itncorp.com,leon.s@itncorp.com,medo.c@asaptickets.com,melvin.a@itncorp.com,mike.h@itncorp.com,mo.b@asaptickets.com,otis.f@airconcierge.com,payton.m@itncorp.com,roger.m@airconcierge.com,roy.v@itncorp.com,sergio.g@itncorp.com,tyrion.i@airconcierge.com,walden.m@airconcierge.com,anete.s@itncorp.com,Mara.p@itncorp.com,derek.j@airconcierge.com,mercedes.z@airconcierge.com,bree.r@airconcierge.com,miguel.p@airconcierge.com,parvesh.k@airconcierge.com,irwin.a@airconcierge.com,molly.m@airconcierge.com,arnold.l@itncorp.com,Larry.r@airconcierge.com,fernando.m@airconcierge.com,sri.k@airconcierge.com,gideon.f@airconcierge.com,patrick.a@airconcierge.com,lauris.e@itncorp.com,robert.b@airconcierge.com,Ralph@skyluxtravel.com,silvester@skyluxtravel.com,tom@skyluxtravel.com,chandler.m@itncorp.com,nicolas.p@itncorp.com,ted.s@itncorp.com,Marcel.M@itncorp.com ,quentin.d@airconcierge.com ,jabez.a@airconcierge.com,steve.g@itncorp.com,justin.b@itncorp.com,adrian.a@itncorp.com,chelsea.a@itncorp.com,rd.o@airconcierge.com,suzie.g@airconcierge.com,asia.a@airconcierge.com,bars.b@airconcierge.com,adam.i@itncorp.com,ramon.p@airconcierge.com,isabel.a@airconcierge.com");
+        // Get CSV file
         json.toCSVFile();
         System.out.println("Done!!");
     }
