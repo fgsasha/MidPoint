@@ -39,7 +39,7 @@ public class JSONparser {
     private String filterValues = "00000,00001";
     private Map jsonMapEMC = new HashMap< String, String>();
     private Map jsonMapHRM = new HashMap< String, String>();
-    private String replaceSymbol = "+";
+    private String replaceSymbol = "~";
 
     public JSONparser(String direction, String emcJsonFile, String emcCSVFile, String hrmJsonFile, String hrmCSVFile, String filterFieldName, String filterValues) {
 
@@ -279,12 +279,16 @@ public class JSONparser {
             keys[k] = keySetIternextValue.toString();
 
             csvKeysString = csvKeysString + keySetIternextValue;
+
             if (keySetIter.hasNext()) {
                 csvKeysString = csvKeysString + this.delimiter;
             }
             k = k + 1;
         }
         //System.out.println(csvKeysString);
+
+        //делаем подмену ключевых полей на те, что уже использовались в idm
+        csvKeysString = csvKeysString.replace("isActive", "isActiveEMC");
 
         if (this.wholeFile) {
             returnArray = new String[ks.length + 1];
@@ -298,27 +302,75 @@ public class JSONparser {
             //System.out.println(ks[i]);
 
             JSONObject obj2 = (JSONObject) objGetByKey.get(ks[i]);
-            if (obj2.isNull("password") == false) {
+
+            // Если нужны все пользователи то тогда есть смысл внести изменения Есть ли у пользователей логины и активны ли они 
+            //oldValue  sourceId password
+            if (obj2.isNull("login") == false && obj2.get("isActive").equals("1")) {
                 String csvStringValues = "";
-                hrmId = obj2.get("hrmId").toString();
+                if (obj2.isNull("hrmId") == false) {
+                    hrmId = obj2.get("hrmId").toString();
+                } else {
+                    hrmId = "";
+                }
                 for (int p = 0; p < keys.length; p++) {
 
-                    String toAdd = obj2.get(keys[p].toString().trim()).toString();
-                    String mainEmail;
-                    if (keys[p].equalsIgnoreCase("emails")) {
-                        mainEmail = getMainEmail(toAdd);
-                        //Замена исходного значения "emails" 
-                        toAdd = mainEmail;
+                    String toAdd = "";
 
-                    }
+                    if (obj2.isNull(keys[p].toString()) == false) {
 
-                    if (toAdd.contains(this.delimiter)) {
-                        toAdd = toAdd.replaceAll(this.delimiter, replaceSymbol);
-                        //System.out.println("FIND!!!");
-                    }
-                    //System.out.println(keys[p]);
-                    if (keys[p].equalsIgnoreCase("extensions") || keys[p].equalsIgnoreCase("settings")) {
-                        toAdd = "";
+                        toAdd = obj2.get(keys[p].toString()).toString();
+
+                        if (keys[p].equalsIgnoreCase("emails")) {
+                            String mainEmail = getMainEmail(toAdd);
+                            //Замена исходного значения "emails" 
+                            toAdd = mainEmail;
+
+                        }
+
+                        if (keys[p].equalsIgnoreCase("companies")) {
+                            String companies = getCompanies(toAdd);
+                            //Замена исходного значения "companies" 
+                            toAdd = companies;
+
+                        }
+
+                        if (keys[p].equalsIgnoreCase("groups")) {
+                            String groups = getGroups(toAdd);
+                            //Замена исходного значения "groups" 
+                            toAdd = groups;
+
+                        }
+
+                        if (keys[p].equalsIgnoreCase("photos")) {
+                            String photos = getPhotos(toAdd);
+                            //Замена исходного значения "photos" 
+                            toAdd = photos;
+
+                        }
+
+                        if (keys[p].equalsIgnoreCase("roles")) {
+                            String roles = toAdd.replace("[", "").replace("]", "").replace("\"", "");
+                            //Замена исходного значения "roles" 
+                            toAdd = roles;
+
+                        }
+
+                        if (keys[p].equalsIgnoreCase("password")) {
+                            String roles = toAdd.replace("[", "").replace("]", "").replace("\"", "");
+                            //Замена исходного значения "password" 
+                            toAdd = "";
+
+                        }
+
+                        if (toAdd.contains(this.delimiter)) {
+                            toAdd = toAdd.replaceAll(this.delimiter, replaceSymbol);
+                            //System.out.println("FIND!!!");
+                        }
+                        //System.out.println(keys[p]);
+                        if (keys[p].equalsIgnoreCase("extensions") || keys[p].equalsIgnoreCase("settings")) {
+                            toAdd = "";
+                        }
+
                     }
 
                     csvStringValues = csvStringValues + toAdd;
@@ -358,6 +410,59 @@ public class JSONparser {
     }
 
     //toDo
+    private String getPhotos(String toAdd) {
+
+        toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
+        JSONArray array = new JSONArray(toAdd);
+        String photos = "";
+
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject obj = array.getJSONObject(i);
+            photos = photos + obj.getString("photo");
+            if (i < array.length() - 1) {
+                photos = photos + this.delimiter;
+            }
+
+        }
+        return photos;
+    }
+
+    private String getGroups(String toAdd) {
+
+        toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
+        JSONArray array = new JSONArray(toAdd);
+        String groups = "";
+
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject obj = array.getJSONObject(i);
+            groups = groups + obj.getString("name");
+            if (i < array.length() - 1) {
+                groups = groups + this.delimiter;
+            }
+
+        }
+        return groups;
+    }
+
+    private String getCompanies(String toAdd) {
+        toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
+        JSONObject obj = new JSONObject(toAdd);
+        String companies = "";
+        String keySetIternextValue = "";
+        Iterator<String> keySetIter = obj.keys();
+        String[] keys = new String[obj.keySet().size()];
+        int k = 0;
+        while (keySetIter.hasNext()) {
+            keySetIternextValue = keySetIter.next();
+            companies = companies + obj.getString(keySetIternextValue.toString());
+            if (keySetIter.hasNext()) {
+                companies = companies + this.delimiter;
+            }
+
+        }
+        return companies;
+    }
+
     private String getMainEmail(String toAdd) {
         toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
         JSONObject obj = new JSONObject(toAdd);
@@ -473,7 +578,7 @@ public class JSONparser {
     }
 
     public static void main(String[] args) throws IOException {
-        String direction = "HRM-EMC";//EMC-HRM, EMC, HRM
+        String direction = "EMC-HRM";//EMC-HRM, EMC, HRM
         String emcJsonFile = "/home/onekriach/Downloads/work/EMC_export.json";
         String emcCSVFile = "/home/onekriach/Downloads/work/EMC_export_27-09.csv";
         String hrmJsonFile = "/home/onekriach/Downloads/work/export_27-09_fresh_HRM_data.json";
