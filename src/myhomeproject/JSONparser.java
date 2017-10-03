@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.json.*;
 
 /**
@@ -35,8 +34,12 @@ public class JSONparser {
     private String delimiter = ",";
     private Integer numberOfrows = 5;
     private String[] returnArray = new String[numberOfrows + 1];
-    private String filterFieldName = "PID";
-    private String filterValues = "00000,00001";
+    private String filterFieldName = "*"; // "PID";
+    private String hrmFilterFieldName = "*";
+    private String emcFilterFieldName = "*";
+    private String filterValues = "*"; //"00000,00001";
+    private String hrmFilterValues = "*";
+    private String emcFilterValues = "*";
     private Map jsonMapEMC = new HashMap< String, String>();
     private Map jsonMapHRM = new HashMap< String, String>();
     private String replaceSymbol = "~";
@@ -67,10 +70,11 @@ public class JSONparser {
             //json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export_cut.json");
             this.setInputJSONFilePath(this.emcJsonFile);
             this.setOutputCSVFilePath(this.emcCSVFile);
-
             this.EMCJsonToArray();
 
             //-------------- HRM ------------------
+            this.hrmFilterFieldName = this.filterFieldName;
+            this.hrmFilterValues = this.filterValues;
             this.setInputJSONFilePath(this.hrmJsonFile);
             this.setOutputCSVFilePath(this.hrmCSVFile);
             // Get CSV file
@@ -89,6 +93,8 @@ public class JSONparser {
             //--------------- EMC ------------------
             //json.setSourceHRData("EMC-HRM");
             //json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export_cut.json");
+            this.emcFilterFieldName = this.filterFieldName;
+            this.emcFilterValues = this.filterValues;
             this.setInputJSONFilePath(this.emcJsonFile);
             this.setOutputCSVFilePath(this.emcCSVFile);
 
@@ -157,7 +163,7 @@ public class JSONparser {
         Iterator<String> keySetIter = firstRow.keys();
 
         String csvStringValues = "";
-        String[] filterFieldnames = filterFieldName.split(this.delimiter);
+        String[] filterFieldnames = hrmFilterFieldName.split(this.delimiter);
         Boolean checkResult = Boolean.FALSE;
         Array returnArrayList;
 
@@ -192,9 +198,9 @@ public class JSONparser {
         for (int i = 0; i < numberOfrows; i++) {
 
             JSONObject arrayJson = array.getJSONObject(i);
-            //System.out.println("filterValues" + filterValues);
+            //System.out.println("hrmFilterFieldValue" + hrmFilterFieldValue);
 
-            if (filterFieldName.equalsIgnoreCase("*") || filterValues.equalsIgnoreCase("*")) {
+            if (hrmFilterFieldName.equalsIgnoreCase("*") || hrmFilterValues.equalsIgnoreCase("*")) {
                 checkResult = true;
             } else {
 
@@ -202,7 +208,7 @@ public class JSONparser {
                     //System.out.println(filterFieldnames[s].toString());
                     String checkedValue = arrayJson.get(filterFieldnames[s]).toString();
                     //System.out.println(checkedValue);
-                    Boolean innerCheckResult = this.checkInList(checkedValue, filterValues, this.delimiter);
+                    Boolean innerCheckResult = this.checkInList(checkedValue, hrmFilterValues, this.delimiter);
                     if (innerCheckResult) {
                         checkResult = innerCheckResult;
                     }
@@ -264,6 +270,8 @@ public class JSONparser {
         String[] ks = objGetByKey.keySet().toArray(new String[0]);
 
         JSONObject firstRow = (JSONObject) objGetByKey.get("1");
+        String[] filterFieldnames = emcFilterFieldName.split(this.delimiter);
+        Boolean checkResult = Boolean.FALSE;
 
         Iterator<String> keySetIter = firstRow.keys();
         String hrmId = "";
@@ -303,6 +311,26 @@ public class JSONparser {
 
             JSONObject obj2 = (JSONObject) objGetByKey.get(ks[i]);
 
+            if (emcFilterFieldName.equalsIgnoreCase("*") || emcFilterValues.equalsIgnoreCase("*")) {
+                checkResult = true;
+            } else {
+
+                for (int s = 0; s < filterFieldnames.length; s++) {
+                    //System.out.println(filterFieldnames[s].toString());
+                    String checkedValue = "";
+                    if (obj2.has(filterFieldnames[s])) {
+                        checkedValue = obj2.get(filterFieldnames[s]).toString();
+
+                        checkedValue = checkedValue.replace(this.delimiter, replaceSymbol);
+                        Boolean innerCheckResult = this.checkInList(checkedValue, emcFilterValues, this.delimiter);
+                        //System.out.println("checkedValue: "+checkedValue+", emcFilterValues: "+emcFilterValues);
+                        if (innerCheckResult) {
+                            checkResult = innerCheckResult;
+                        }
+                    }
+                }
+            }
+
             // Если нужны все пользователи то тогда есть смысл внести изменения Есть ли у пользователей логины и активны ли они 
             //oldValue  sourceId password
             if (obj2.isNull("login") == false && obj2.get("isActive").equals("1")) {
@@ -310,7 +338,7 @@ public class JSONparser {
                 if (obj2.isNull("hrmId") == false) {
                     hrmId = obj2.get("hrmId").toString();
                 } else {
-                    hrmId = "";
+                    hrmId = "dummy-" + i;
                 }
                 for (int p = 0; p < keys.length; p++) {
 
@@ -373,10 +401,14 @@ public class JSONparser {
 
                     }
 
-                    csvStringValues = csvStringValues + toAdd;
+                    //System.out.println("checkResultEMC="+checkResult.toString());    
+                    if (checkResult) {
 
-                    if (p < keys.length - 1) {
-                        csvStringValues = csvStringValues + this.delimiter;
+                        csvStringValues = csvStringValues + toAdd;
+
+                        if (p < keys.length - 1) {
+                            csvStringValues = csvStringValues + this.delimiter;
+                        }
                     }
 
                 }
@@ -393,7 +425,7 @@ public class JSONparser {
                 //Сбрасываем все в начальные значения
                 csvStringValues = "";
                 hrmId = "";
-
+                checkResult = false;
             }
         }
         System.out.println(hmap.size());
@@ -523,7 +555,7 @@ public class JSONparser {
         } else {
             String[] arrayInputData = inputString.split(delimiter);
             for (int i = 0; i < arrayInputData.length; i++) {
-                if (arrayInputData[i].equalsIgnoreCase(checkedValue)) {
+                if (checkedValue.equalsIgnoreCase(arrayInputData[i]) || checkedValue.contains(arrayInputData[i])) {
                     return true;
                 } else {
                     result = false;
@@ -578,12 +610,12 @@ public class JSONparser {
     }
 
     public static void main(String[] args) throws IOException {
-        String direction = "EMC-HRM";//EMC-HRM, EMC, HRM
+        String direction = "HRM-EMC";//EMC-HRM, EMC, HRM
         String emcJsonFile = "/home/onekriach/Downloads/work/EMC_export.json";
         String emcCSVFile = "/home/onekriach/Downloads/work/EMC_export_27-09.csv";
         String hrmJsonFile = "/home/onekriach/Downloads/work/export_27-09_fresh_HRM_data.json";
         String hrmCSVFile = "/home/onekriach/Downloads/work/fresh_HRM_csv_All_users_27-09-Anastasia.csv";
-        String filterFieldName = "emailPrimary,emailWork";
+        String filterFieldName = "emailWork,emailPrimary";
         //String filterFieldName = "*";
         String filterValues = "*";
 
