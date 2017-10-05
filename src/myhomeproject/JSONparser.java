@@ -32,6 +32,7 @@ public class JSONparser {
     private String hrmCSVFile;
     private Boolean wholeFile = Boolean.TRUE;
     private String delimiter = ",";
+    private String replaceSymbol = "~";
     private Integer numberOfrows = 5;
     private String[] returnArray = new String[numberOfrows + 1];
     private String filterFieldName = "*"; // "PID";
@@ -42,7 +43,7 @@ public class JSONparser {
     private String emcFilterValues = "*";
     private Map jsonMapEMC = new HashMap< String, String>();
     private Map jsonMapHRM = new HashMap< String, String>();
-    private String replaceSymbol = "~";
+    private String[] outputArray;
 
     public JSONparser(String direction, String emcJsonFile, String emcCSVFile, String hrmJsonFile, String hrmCSVFile, String filterFieldName, String filterValues) {
 
@@ -102,6 +103,149 @@ public class JSONparser {
             this.toCSVFile();
 
         }
+
+        if (this.sourceHRData.equalsIgnoreCase("multiEMC-HRM")) {
+
+            // Если "HRM-EMC" то EMC первый,  если "EMC-HRM" то HRM. 
+            // Если нужны данные только EMC или HRM то оставляем соответствующую секцию другую коментируем)
+            //-------------- HRM ------------------
+            this.setInputJSONFilePath(this.hrmJsonFile);
+            this.setOutputCSVFilePath(this.hrmCSVFile);
+            this.HRMJsonToArray();
+
+            //--------------- multiEMC ------------------
+            //json.setSourceHRData("EMC-HRM");
+            //json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export_cut.json");
+            //Временно очищаем то что получили от HRM, что бы собрать HashMap из множества файлов EMC (каждая компания имеет собстевнный json вывод)  
+            Map jsonMapHRM_2 = new HashMap(this.jsonMapHRM);
+            this.jsonMapHRM.clear();
+            this.jsonMapEMC.clear();
+
+            this.emcFilterFieldName = this.filterFieldName;
+            this.emcFilterValues = this.filterValues;
+
+            String[] emcJsonfiles = this.getListAllFilesByMask(emcJsonFile);
+            Map emcJsonMaps = new HashMap<String, String>();
+
+            for (int k = 0; k < emcJsonfiles.length; k++) {
+                System.out.println("emcJsonfiles path: "+ emcJsonfiles[k]);
+
+                if (k == emcJsonfiles.length - 1) {
+                    //TODO
+                    this.setInputJSONFilePath(emcJsonfiles[k]);
+                    this.setOutputCSVFilePath(this.emcCSVFile);
+
+                    this.EMCJsonToArray();
+                    if (emcJsonMaps.isEmpty()) {
+                        emcJsonMaps = this.jsonMapEMC;
+                    } else {
+                        Iterator iter = this.jsonMapEMC.keySet().iterator();
+                        while (iter.hasNext()) {
+                            String keyValue = (String) iter.next();
+                            emcJsonMaps.putIfAbsent(keyValue, this.jsonMapEMC.get(keyValue));
+                        }
+                        this.jsonMapEMC.clear();
+                    }
+                    this.outputArray = this.joinCSVFrom2HashMaps(emcJsonMaps, jsonMapHRM_2);
+                    this.toCSVFile();
+
+                } else {
+                    this.setInputJSONFilePath(emcJsonfiles[k]);
+                    this.setOutputCSVFilePath(this.emcCSVFile);
+                    this.EMCJsonToArray();
+                    if (emcJsonMaps.isEmpty()) {
+                        emcJsonMaps = this.jsonMapEMC;
+                    } else {
+                        Iterator iter = this.jsonMapEMC.keySet().iterator();
+                        while (iter.hasNext()) {
+                            String keyValue = (String) iter.next();
+                            emcJsonMaps.putIfAbsent(keyValue, this.jsonMapEMC.get(keyValue));
+                        }
+                        this.jsonMapEMC.clear();
+                    }
+
+                }
+
+            }
+
+            System.out.println("emcJsonMaps size=" + emcJsonMaps.size());
+
+//            this.setInputJSONFilePath(this.emcJsonFile);
+//            this.setOutputCSVFilePath(this.emcCSVFile);
+//
+//            // Get CSV file
+//            this.toCSVFile();
+        }
+        
+        if (this.sourceHRData.equalsIgnoreCase("HRM-multiEMC")) {
+
+
+            //--------------- multiEMC ------------------
+            //json.setSourceHRData("EMC-HRM");
+            //json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export_cut.json");
+            //Временно очищаем то что получили от HRM, что бы собрать HashMap из множества файлов EMC (каждая компания имеет собстевнный json вывод)  
+            this.jsonMapHRM.clear();
+            this.jsonMapEMC.clear();
+
+            String[] emcJsonfiles = this.getListAllFilesByMask(emcJsonFile);
+            Map emcJsonMaps = new HashMap<String, String>();
+
+            for (int k = 0; k < emcJsonfiles.length; k++) {
+                System.out.println("emcJsonfiles path: "+ emcJsonfiles[k]);
+
+                if (k == emcJsonfiles.length - 1) {
+                    //TODO
+                    this.setInputJSONFilePath(emcJsonfiles[k]);
+                    this.setOutputCSVFilePath(this.emcCSVFile);
+
+                    this.EMCJsonToArray();
+                    if (emcJsonMaps.isEmpty()) {
+                        emcJsonMaps = this.jsonMapEMC;
+                    } else {
+                        Iterator iter = this.jsonMapEMC.keySet().iterator();
+                        while (iter.hasNext()) {
+                            String keyValue = (String) iter.next();
+                            emcJsonMaps.putIfAbsent(keyValue, this.jsonMapEMC.get(keyValue));
+                        }
+                        this.jsonMapEMC.clear();
+                    }
+
+
+                } else {
+                    this.setInputJSONFilePath(emcJsonfiles[k]);
+                    this.setOutputCSVFilePath(this.emcCSVFile);
+                    this.EMCJsonToArray();
+                    if (emcJsonMaps.isEmpty()) {
+                        emcJsonMaps = this.jsonMapEMC;
+                    } else {
+                        Iterator iter = this.jsonMapEMC.keySet().iterator();
+                        while (iter.hasNext()) {
+                            String keyValue = (String) iter.next();
+                            emcJsonMaps.putIfAbsent(keyValue, this.jsonMapEMC.get(keyValue));
+                        }
+                        this.jsonMapEMC.clear();
+                    }
+
+                }
+
+            }
+
+            System.out.println("emcJsonMaps size=" + emcJsonMaps.size());
+
+            
+            //-------------- HRM ------------------
+            this.hrmFilterFieldName = this.filterFieldName;
+            this.hrmFilterValues = this.filterValues;
+            this.jsonMapEMC.clear();
+            this.jsonMapHRM.clear();            
+            this.setInputJSONFilePath(this.hrmJsonFile);
+            this.setOutputCSVFilePath(this.hrmCSVFile);
+            this.HRMJsonToArray();
+            this.outputArray = this.joinCSVFrom2HashMaps(this.jsonMapHRM, emcJsonMaps);
+            this.toCSVFile();
+
+        }
+
         System.out.println("Done!!");
     }
 
@@ -190,6 +334,8 @@ public class JSONparser {
         if (this.wholeFile) {
             returnArray = new String[array.length() + 1];
             this.numberOfrows = array.length();
+        } else {
+            returnArray = new String[numberOfrows + 1];
         }
 
         returnArray[0] = csvKeysString;
@@ -433,9 +579,9 @@ public class JSONparser {
 
         System.out.println(jsonMapHRM.isEmpty());
         if (jsonMapHRM.isEmpty() == false) {
-            String[] returnArray = this.joinCSVFrom2HashMaps(jsonMapEMC, jsonMapHRM);
+            String[] returnArrayT = this.joinCSVFrom2HashMaps(jsonMapEMC, jsonMapHRM);
 
-            return (String[]) returnArray;
+            return (String[]) returnArrayT;
         } else {
             return (String[]) returnArray;
         }
@@ -544,7 +690,7 @@ public class JSONparser {
 
         }
 
-        System.out.println(mainEmailStr);
+        //System.out.println(mainEmailStr);
         return mainEmailStr;
     }
 
@@ -570,20 +716,31 @@ public class JSONparser {
     private void toCSVFile() throws IOException {
 
         PrintWriter writer = new PrintWriter(this.outputCSVFilePath, "UTF-8");
-        String[] k;
+        String[] k = null;
         if (sourceHRData.equalsIgnoreCase("HRM-EMC")) {
             k = this.HRMJsonToArray();
-        } else {
+        }
+
+        if (sourceHRData.equalsIgnoreCase("EMC-HRM")) {
             k = this.EMCJsonToArray();
         }
 
-        System.out.println(k.length);
-        for (int i = 0; i < k.length; i++) {
-            if (k[i] != null) {
-                writer.println(k[i]);
+        if (sourceHRData.equalsIgnoreCase("multiEMC-HRM")|| sourceHRData.equalsIgnoreCase("HRM-multiEMC")) {
+            k = this.outputArray;
+
+        }
+
+        if (k != null) {
+            System.out.println(k.length);
+            for (int i = 0; i < k.length; i++) {
+                if (k[i] != null) {
+                    writer.println(k[i]);
+                }
             }
         }
+
         writer.close();
+        System.out.println("OutputFile: "+this.outputCSVFilePath);
 
     }
 
@@ -610,11 +767,13 @@ public class JSONparser {
     }
 
     public static void main(String[] args) throws IOException {
-        String direction = "HRM-EMC";//EMC-HRM, EMC, HRM
-        String emcJsonFile = "/home/onekriach/Downloads/work/EMC_export.json";
-        String emcCSVFile = "/home/onekriach/Downloads/work/EMC_export_27-09.csv";
-        String hrmJsonFile = "/home/onekriach/Downloads/work/export_27-09_fresh_HRM_data.json";
-        String hrmCSVFile = "/home/onekriach/Downloads/work/fresh_HRM_csv_All_users_27-09-Anastasia.csv";
+        String direction = "HRM-multiEMC";//EMC-HRM, EMC, HRM, multiEMC-HRM, HRM-multiEMC
+        //String emcJsonFile = "/home/onekriach/Downloads/work/EMC_export.json";        
+        //String emcCSVFile = "/home/onekriach/Downloads/work/EMC_export_27-09.csv";
+        String emcJsonFile = "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc*.json";
+        String emcCSVFile = "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emcMultiplyJsons.csv";
+        String hrmJsonFile = "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/export_05-10_fresh_HRM_data_ALL.json";
+        String hrmCSVFile = "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/hrmMultiplyJsons_Anastasia.csv";
         String filterFieldName = "emailWork,emailPrimary";
         //String filterFieldName = "*";
         String filterValues = "*";
@@ -622,6 +781,22 @@ public class JSONparser {
         JSONparser json = new JSONparser(direction, emcJsonFile, emcCSVFile, hrmJsonFile, hrmCSVFile, filterFieldName, filterValues);
         json.run();
 
+    }
+
+    private String[] getListAllFilesByMask(String emcJsonFile) {
+        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        String[] returnString = {
+            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_ITN.json",
+            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_SLT.json",
+            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_PH.json",
+            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_CA.json",
+            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_ME.json",
+            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_UK.json",
+            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_BOG.json"
+              //  , "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_Yaturist.json"
+        };
+
+        return returnString;
     }
 
 }
