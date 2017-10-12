@@ -310,6 +310,8 @@ public class JSONparser {
 
     String StringFromStream() throws IOException {
         String content = new String(Files.readAllBytes(Paths.get(inputJSONFilePath)));
+//                HTMLutils html = new HTMLutils();
+//                String content=html.readFromUrl("https://github.com/mdn/learning-area/blob/master/accessibility/aria/quotes.json");
         return content;
 
     }
