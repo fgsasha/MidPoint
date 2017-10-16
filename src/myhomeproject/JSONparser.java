@@ -17,10 +17,16 @@ import java.util.List;
 import java.util.Map;
 import org.json.*;
 import java.io.File;
-import java.io.FilenameFilter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.nio.CharBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 /**
  *
@@ -53,26 +59,48 @@ public class JSONparser {
     public JSONparser(String direction, String emcJsonFile, String hrmJsonFile, String filterFieldName, String filterValues) {
 
         DateFormat dateFormat = new SimpleDateFormat("_yyyy-MM-dd-HH-mm-ss");
-	Date date = new Date();
-	String currentDate=dateFormat.format(date); //2016/11/16 12:08:43      
-        
+        Date date = new Date();
+        String currentDate = dateFormat.format(date); //2016/11/16 12:08:43      
+
 //json.setFilterFieldName("*");
         //json.setFilterValues("*");
         this.wholeFile = Boolean.TRUE;
         this.setSourceHRData(direction);//EMC-HRM, EMC, HRM
         this.setEmcJsonFile(emcJsonFile);
         if (emcJsonFile.contains("*")) {
-            this.setEmcCSVFile(emcJsonFile.replace(new File(emcJsonFile).getName(), "emc_export_from_multiple_files"+currentDate+".csv"));
+            this.setEmcCSVFile(emcJsonFile.replace(new File(emcJsonFile).getName(), "emc_export_from_multiple_files" + currentDate + ".csv"));
         } else {
-            this.setEmcCSVFile(emcJsonFile.replace(".json", currentDate+".csv"));
+            this.setEmcCSVFile(emcJsonFile.replace(".json", currentDate + ".csv"));
         }
         this.setHrmJsonFile(hrmJsonFile);
-        this.setHrmCSVFile(hrmJsonFile.replace(".json", currentDate+".csv"));
+        this.setHrmCSVFile(hrmJsonFile.replace(".json", currentDate + ".csv"));
         this.setFilterFieldName(filterFieldName);
         this.setFilterValues(filterValues);
     }
 
     public void run() throws IOException {
+
+        if (this.sourceHRData.equalsIgnoreCase("HRM")) {
+
+            //-------------- HRM ------------------
+            this.hrmFilterFieldName = this.filterFieldName;
+            this.hrmFilterValues = this.filterValues;
+            this.setInputJSONFilePath(this.hrmJsonFile);
+            this.setOutputCSVFilePath(this.hrmCSVFile);
+            // Get CSV file
+            this.toCSVFile();
+        }
+
+        if (this.sourceHRData.equalsIgnoreCase("EMC")) {
+            //--------------- EMC ------------------
+
+            this.emcFilterFieldName = this.filterFieldName;
+            this.emcFilterValues = this.filterValues;
+            this.setInputJSONFilePath(this.emcJsonFile);
+            this.setOutputCSVFilePath(this.emcCSVFile);
+            // Get CSV file
+            this.toCSVFile();
+        }
 
         if (this.sourceHRData.equalsIgnoreCase("HRM-EMC")) {
 
@@ -139,7 +167,7 @@ public class JSONparser {
 
             String[] emcJsonfiles = this.getListAllFilesByMask(emcJsonFile);
             Map emcJsonMaps = new HashMap<String, String>();
-            
+
             for (int k = 0; k < emcJsonfiles.length; k++) {
                 System.out.println("emcJsonfiles path: " + emcJsonfiles[k]);
 
@@ -248,14 +276,14 @@ public class JSONparser {
             //-------------- HRM ------------------
             this.hrmFilterFieldName = this.filterFieldName;
             this.hrmFilterValues = this.filterValues;
-            emcJsonMaps=new HashMap<String, String>(emcJsonMaps);
+            emcJsonMaps = new HashMap<String, String>(emcJsonMaps);
             this.jsonMapEMC.clear();
-           // this.jsonMapHRM.clear();
+            // this.jsonMapHRM.clear();
             this.setInputJSONFilePath(this.hrmJsonFile);
             this.setOutputCSVFilePath(this.hrmCSVFile);
-            this.jsonMapHRM=new HashMap<String, String>();
+            this.jsonMapHRM = new HashMap<String, String>();
             this.HRMJsonToArray();
-            System.out.println("this.jsonMapHRM="+this.jsonMapHRM.size());
+            System.out.println("this.jsonMapHRM=" + this.jsonMapHRM.size());
             this.outputArray = this.joinCSVFrom2HashMaps(this.jsonMapHRM, emcJsonMaps);
             this.toCSVFile();
 
@@ -369,13 +397,13 @@ public class JSONparser {
 
                 for (int s = 0; s < filterFieldnames.length; s++) {
                     //System.out.println(filterFieldnames[s].toString());
-                    String checkedValue="";
-                            if (arrayJson.has(filterFieldnames[s])){
-                            checkedValue = arrayJson.get(filterFieldnames[s]).toString();
-                             }
+                    String checkedValue = "";
+                    if (arrayJson.has(filterFieldnames[s])) {
+                        checkedValue = arrayJson.get(filterFieldnames[s]).toString();
+                    }
                     //System.out.println(checkedValue);
                     Boolean innerCheckResult = this.checkInList(checkedValue, hrmFilterValues, this.delimiter);
-                           
+
                     if (innerCheckResult) {
                         checkResult = innerCheckResult;
                     }
@@ -442,20 +470,19 @@ public class JSONparser {
             firstRow = (JSONObject) objGetByKey.get("1");
         } else {
             Iterator<String> recordKey = objGetByKey.keys();
-           
-            while (recordKey.hasNext()){
-                 String key= recordKey.next();
-                System.out.println("key="+key);
-                     
-                if(objGetByKey.getJSONObject(key).has("companies")){
-             
-                firstRow = (JSONObject) objGetByKey.get(key);
-                break;
-                } else { 
-                   // System.out.println("login:"+objGetByKey.getJSONObject(key).get("login"));
+
+            while (recordKey.hasNext()) {
+                String key = recordKey.next();
+                System.out.println("key=" + key);
+
+                if (objGetByKey.getJSONObject(key).has("companies")) {
+
+                    firstRow = (JSONObject) objGetByKey.get(key);
+                    break;
+                } else {
+                    // System.out.println("login:"+objGetByKey.getJSONObject(key).get("login"));
                 }
             }
-                     
 
         }
 
@@ -765,11 +792,11 @@ public class JSONparser {
 
         PrintWriter writer = new PrintWriter(this.outputCSVFilePath, "UTF-8");
         String[] k = null;
-        if (sourceHRData.equalsIgnoreCase("HRM-EMC")) {
+        if (sourceHRData.equalsIgnoreCase("HRM-EMC") || sourceHRData.equalsIgnoreCase("HRM")) {
             k = this.HRMJsonToArray();
         }
 
-        if (sourceHRData.equalsIgnoreCase("EMC-HRM")) {
+        if (sourceHRData.equalsIgnoreCase("EMC-HRM") || sourceHRData.equalsIgnoreCase("EMC")) {
             k = this.EMCJsonToArray();
         }
 
@@ -779,8 +806,9 @@ public class JSONparser {
         }
 
         if (k != null) {
-            System.out.println(k.length);
+            System.out.println("Output csv number of rows:"+k.length);
             for (int i = 0; i < k.length; i++) {
+                System.out.println("k[i]="+k[i]);
                 if (k[i] != null) {
                     writer.println(this.cleanOfSpecSymbols(k[i]));
                 }
@@ -794,11 +822,11 @@ public class JSONparser {
 
     private String[] joinCSVFrom2HashMaps(Map jsonMapHRM, Map jsonMapEMC) {
         //String[] returnArray= new String[jsonMapHRM.size()];
-        String csvFieldNames="";
-        if(jsonMapEMC.isEmpty()==false){
-        csvFieldNames = (String) jsonMapHRM.get("csvFieldNames") + this.delimiter + (String) jsonMapEMC.get("csvFieldNames");
+        String csvFieldNames = "";
+        if (jsonMapEMC.isEmpty() == false) {
+            csvFieldNames = (String) jsonMapHRM.get("csvFieldNames") + this.delimiter + (String) jsonMapEMC.get("csvFieldNames");
         } else {
-        csvFieldNames = (String) jsonMapHRM.get("csvFieldNames");
+            csvFieldNames = (String) jsonMapHRM.get("csvFieldNames");
         }
 
         //returnArray[0]=csvFieldNames;
@@ -844,23 +872,13 @@ public class JSONparser {
                     String toAdd = file.getName();
                     System.out.println("fileNames: " + toAdd);
                     textFiles.add(dirPath + toAdd);
-                    
+
                 }
 
             }
         }
         String[] returnString = textFiles.toArray(new String[textFiles.size()]);
 
-//        String[] returnString = {
-//            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_ITN.json",
-//            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_SLT.json",
-//            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_PH.json",
-//            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_CA.json",
-//            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_ME.json",
-//            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_UK.json",
-//            "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_BOG.json"
-//              //  , "/home/onekriach/Downloads/work/multipleJsonEMC/drive-download-20171005T194716Z-001/EMC/emc_Yaturist.json"
-//        };
         return returnString;
     }
 
@@ -871,21 +889,32 @@ public class JSONparser {
     }
 
     public static void main(String[] args) throws IOException {
-        String direction = "HRM-multiEMC";//EMC-HRM, EMC, HRM, multiEMC-HRM, HRM-multiEMC
-        String emcJsonFile = "/home/onekriach/Documents/IAM/EMC/.*.json";
-        String hrmJsonFile = "/home/onekriach/Documents/IAM/HRM/export_HRM_data_ALL_2017-10-10.json";
-        String filterFieldName = "fullname"; //emailWork,emailPrimary,emails
-        String filterValues = "*";
-        
-        
-//        String emcJsonFile = "/home/onekriach/Documents/IAM/EMC/emc_ITN.json";
-//        String emcCSVFile = "/home/onekriach/Documents/IAM/EMC/emc_ITN.csv";
-//        String hrmJsonFile = "/home/onekriach/Documents/IAM/HRM/export_05-10_fresh_HRM_data_ALL.json";
-//        String hrmCSVFile = "/home/onekriach/Documents/IAM/HRM/export_05-10_fresh_HRM_data_ALL.csv";
-//        String filterFieldName = "emailWork,emailPrimary";
-        
+        System.out.println("Working Directory = " + System.getProperty("user.dir"));
 
-        
+        Properties prop = new Properties();
+        InputStream input = null;
+
+        input = new FileInputStream("jsonparser.properties");
+
+        // load a properties file
+        prop.load(input);
+
+        // get the property value and print it out
+        System.out.println(prop.getProperty("direction"));
+        String direction = prop.getProperty("direction");
+
+        System.out.println(prop.getProperty("emcJsonFile"));
+        String emcJsonFile = prop.getProperty("emcJsonFile");
+
+        System.out.println(prop.getProperty("hrmJsonFile"));
+        String hrmJsonFile = prop.getProperty("hrmJsonFile");
+
+        System.out.println(prop.getProperty("filterFieldName"));
+        String filterFieldName = prop.getProperty("filterFieldName");
+
+        System.out.println(prop.getProperty("filterValues"));
+        String filterValues = prop.getProperty("filterValues");
+
         JSONparser json = new JSONparser(direction, emcJsonFile, hrmJsonFile, filterFieldName, filterValues);
         json.run();
 
