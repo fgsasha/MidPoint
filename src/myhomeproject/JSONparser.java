@@ -337,9 +337,9 @@ public class JSONparser {
     }
 
     String StringFromStream() throws IOException {
-        String content = new String(Files.readAllBytes(Paths.get(inputJSONFilePath)));
-//                HTMLutils html = new HTMLutils();
-//                String content=html.readFromUrl("https://github.com/mdn/learning-area/blob/master/accessibility/aria/quotes.json");
+       //String content = new String(Files.readAllBytes(Paths.get(inputJSONFilePath)));
+       HTMLutils html = new HTMLutils();
+       String content=new String (html.readFromUrl("http://"));
         return content;
 
     }
@@ -890,6 +890,11 @@ public class JSONparser {
 
     public static void main(String[] args) throws IOException {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
+        //System.setProperty("javax.net.ssl.keyStore", "keystore.jks");
+        System.setProperty("javax.net.ssl.trustStore", "/etc/ssl/certs/java/cacerts");
+        System.setProperty("javax.net.ssl.keyStorePassword", "changeit");
+        System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
+        //System.setProperty("javax.net.debug", "ssl");
 
         Properties prop = new Properties();
         InputStream input = null;
