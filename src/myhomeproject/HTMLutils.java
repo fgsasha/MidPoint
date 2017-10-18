@@ -5,9 +5,6 @@
  */
 package myhomeproject;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,11 +54,13 @@ public class HTMLutils {
                 urlConnection.setHostnameVerifier(hostnameVerifier);
                 urlConnection.setRequestProperty("Content-Type", "application/json");
                 is = urlConnection.getInputStream();
+                //urlConnection.disconnect();
             } else {
                 HttpURLConnection urlConnection;
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestProperty("Content-Type", "application/json");
                 is = urlConnection.getInputStream();
+                //urlConnection.disconnect();
             }
             BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
             jsonText = new String(readAll(rd));
@@ -71,6 +70,7 @@ public class HTMLutils {
         } finally {
             if (is != null) {
                 is.close();
+                
             }
         }
     }

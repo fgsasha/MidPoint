@@ -27,6 +27,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.zip.DataFormatException;
 
 /**
  *
@@ -57,13 +58,10 @@ public class JSONparser {
     private String[] outputArray;
 
     public JSONparser(String direction, String emcJsonFile, String hrmJsonFile, String filterFieldName, String filterValues) {
-
+        //Офлайн Конструктор для чтения из фалов
         DateFormat dateFormat = new SimpleDateFormat("_yyyy-MM-dd-HH-mm-ss");
         Date date = new Date();
-        String currentDate = dateFormat.format(date); //2016/11/16 12:08:43      
-
-//json.setFilterFieldName("*");
-        //json.setFilterValues("*");
+        String currentDate = dateFormat.format(date);
         this.wholeFile = Boolean.TRUE;
         this.setSourceHRData(direction);//EMC-HRM, EMC, HRM
         this.setEmcJsonFile(emcJsonFile);
@@ -74,6 +72,26 @@ public class JSONparser {
         }
         this.setHrmJsonFile(hrmJsonFile);
         this.setHrmCSVFile(hrmJsonFile.replace(".json", currentDate + ".csv"));
+        this.setFilterFieldName(filterFieldName);
+        this.setFilterValues(filterValues);
+    }
+
+    public JSONparser(String direction, String emcJsonFile, String hrmURL, String hrmOUTCSVFile, String filterFieldName, String filterValues) throws DataFormatException,IOException {
+        //Онлайн конструктор для чтения HRM-JSON  из URL и чтение EMC-JSON из фалов
+        DateFormat dateFormat = new SimpleDateFormat("_yyyy-MM-dd-HH-mm-ss");
+        Date date = new Date();
+        String currentDate = dateFormat.format(date);
+        this.wholeFile = Boolean.TRUE;
+        this.setSourceHRData(direction);//EMC-HRM, EMC, HRM
+        this.setEmcJsonFile(emcJsonFile);
+        if (emcJsonFile.contains("*")) {
+            this.setEmcCSVFile(emcJsonFile.replace(new File(emcJsonFile).getName(), "emc_export_from_multiple_files" + currentDate + ".csv"));
+        } else {
+            this.setEmcCSVFile(emcJsonFile.replace(".json", currentDate + ".csv"));
+        }
+        this.setHrmJsonFile(hrmOUTCSVFile.replace(".csv", ".json.TMP"));
+        this.getJSONFromURL(hrmURL, getHrmJsonFile());
+        this.setHrmCSVFile(hrmOUTCSVFile);
         this.setFilterFieldName(filterFieldName);
         this.setFilterValues(filterValues);
     }
@@ -304,6 +322,10 @@ public class JSONparser {
         this.hrmJsonFile = hrmJsonFile;
     }
 
+    public String getHrmJsonFile() {
+        return this.hrmJsonFile;
+    }
+
     public void setHrmCSVFile(String hrmCSVFile) {
         this.hrmCSVFile = hrmCSVFile;
     }
@@ -337,9 +359,7 @@ public class JSONparser {
     }
 
     String StringFromStream() throws IOException {
-       //String content = new String(Files.readAllBytes(Paths.get(inputJSONFilePath)));
-       HTMLutils html = new HTMLutils();
-       String content=new String (html.readFromUrl("http://"));
+        String content = new String(Files.readAllBytes(Paths.get(inputJSONFilePath)));
         return content;
 
     }
@@ -806,9 +826,9 @@ public class JSONparser {
         }
 
         if (k != null) {
-            System.out.println("Output csv number of rows:"+k.length);
+            System.out.println("Output csv number of rows:" + k.length);
             for (int i = 0; i < k.length; i++) {
-                System.out.println("k[i]="+k[i]);
+                System.out.println("k[i]=" + k[i]);
                 if (k[i] != null) {
                     writer.println(this.cleanOfSpecSymbols(k[i]));
                 }
@@ -888,12 +908,26 @@ public class JSONparser {
 
     }
 
-    public static void main(String[] args) throws IOException {
+    private void getJSONFromURL(String hrmURL, String hrmJsonFile) throws DataFormatException,IOException  {
+
+        HTMLutils html = new HTMLutils();
+        String content = new String(html.readFromUrl(hrmURL));
+        if (!content.startsWith("{")) {
+            throw new DataFormatException(hrmURL + " output does not contain valid JSON format");
+        }
+
+        PrintWriter writer = new PrintWriter(hrmJsonFile, "UTF-8");
+        writer.print(content);
+        writer.close();
+
+    }
+
+    public static void main(String[] args) throws DataFormatException,IOException {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
         //System.setProperty("javax.net.ssl.keyStore", "keystore.jks");
-        System.setProperty("javax.net.ssl.trustStore", "/etc/ssl/certs/java/cacerts");
-        System.setProperty("javax.net.ssl.keyStorePassword", "changeit");
-        System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
+        //System.setProperty("javax.net.ssl.trustStore", "/etc/ssl/certs/java/cacerts");
+        //System.setProperty("javax.net.ssl.keyStorePassword", "changeit");
+        //System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
         //System.setProperty("javax.net.debug", "ssl");
 
         Properties prop = new Properties();
@@ -905,23 +939,39 @@ public class JSONparser {
         prop.load(input);
 
         // get the property value and print it out
-        System.out.println(prop.getProperty("direction"));
+        System.out.println("direction: " + prop.getProperty("direction"));
         String direction = prop.getProperty("direction");
 
-        System.out.println(prop.getProperty("emcJsonFile"));
+        System.out.println("emcJsonFile: " + prop.getProperty("emcJsonFile"));
         String emcJsonFile = prop.getProperty("emcJsonFile");
 
-        System.out.println(prop.getProperty("hrmJsonFile"));
+        System.out.println("hrmJsonFile: " + prop.getProperty("hrmJsonFile"));
         String hrmJsonFile = prop.getProperty("hrmJsonFile");
 
-        System.out.println(prop.getProperty("filterFieldName"));
+        System.out.println("filterFieldName: " + prop.getProperty("filterFieldName"));
         String filterFieldName = prop.getProperty("filterFieldName");
 
-        System.out.println(prop.getProperty("filterValues"));
+        System.out.println("filterValues: " + prop.getProperty("filterValues"));
         String filterValues = prop.getProperty("filterValues");
 
-        JSONparser json = new JSONparser(direction, emcJsonFile, hrmJsonFile, filterFieldName, filterValues);
+        System.out.println("hrmURL: " + prop.getProperty("hrmURL"));
+        String hrmURL = prop.getProperty("hrmURL");
+
+        System.out.println("hrmCSVFile: " + prop.getProperty("hrmOUTCSVFile"));
+        String hrmOUTCSVFile = prop.getProperty("hrmOUTCSVFile");
+
+        JSONparser json;
+        if (hrmURL != null) {
+
+            json = new JSONparser(direction, emcJsonFile, hrmURL, hrmOUTCSVFile, filterFieldName, filterValues);
+
+        } else {
+
+            json = new JSONparser(direction, emcJsonFile, hrmJsonFile, filterFieldName, filterValues);
+        }
+
         json.run();
 
     }
+
 }
