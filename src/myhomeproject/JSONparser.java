@@ -5,7 +5,6 @@
  */
 package myhomeproject;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Array;
 import java.nio.file.Files;
@@ -17,9 +16,6 @@ import java.util.List;
 import java.util.Map;
 import org.json.*;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.nio.CharBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -435,7 +431,7 @@ public class JSONparser {
 
                 for (int p = 0; p < keys.length; p++) {
                     pid = arrayJson.get("PID").toString();
-                    csvStringValues = csvStringValues + arrayJson.get(keys[p].trim()).toString();
+                    csvStringValues = csvStringValues + arrayJson.get(keys[p].trim()).toString().replace(",", "");   //Добавил подмену "," в найденных данных
                     if (p < keys.length - 1) {
                         csvStringValues = csvStringValues + this.delimiter;
                     }
@@ -639,6 +635,8 @@ public class JSONparser {
                         if (keys[p].equalsIgnoreCase("extensions") || keys[p].equalsIgnoreCase("settings")) {
                             toAdd = "";
                         }
+                        
+                        toAdd=toAdd.replace(",", "");   //Добавил подмену "," на пусто в найденных данных
 
                     }
 
@@ -939,6 +937,7 @@ public class JSONparser {
         prop.load(input);
 
         // get the property value and print it out
+        System.out.println("#############################jsonparser.properties#################################");
         System.out.println("direction: " + prop.getProperty("direction"));
         String direction = prop.getProperty("direction");
 
@@ -957,8 +956,10 @@ public class JSONparser {
         System.out.println("hrmURL: " + prop.getProperty("hrmURL"));
         String hrmURL = prop.getProperty("hrmURL");
 
-        System.out.println("hrmCSVFile: " + prop.getProperty("hrmOUTCSVFile"));
+        System.out.println("hrmOUTCSVFile: " + prop.getProperty("hrmOUTCSVFile"));
         String hrmOUTCSVFile = prop.getProperty("hrmOUTCSVFile");
+        
+         System.out.println("#############################EOF#################################");
 
         JSONparser json;
         if (hrmURL != null) {
