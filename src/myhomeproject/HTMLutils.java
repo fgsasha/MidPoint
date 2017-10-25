@@ -76,6 +76,14 @@ public class HTMLutils {
     }
 
     public static void main(String[] args) throws IOException {
+
+//    System.setProperty("javax.net.ssl.storetype", "pks12");
+//    System.setProperty("javax.net.ssl.keyStore", "/home/onekriach/Documents/IAM/EMC/shorttermOleksandr.Nekriach.001.p12");
+//    System.setProperty("javax.net.ssl.keyStorePassword", "TODO");
+//    System.setProperty("javax.net.debug", "ssl");
+        
+        
+        
         HTMLutils htmlOutput = new HTMLutils();
 
         String readFromUrl = htmlOutput.readFromUrl("https://");

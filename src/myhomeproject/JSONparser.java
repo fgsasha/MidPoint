@@ -22,6 +22,7 @@ import java.util.Date;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.Properties;
 import java.util.zip.DataFormatException;
 
@@ -72,7 +73,7 @@ public class JSONparser {
         this.setFilterValues(filterValues);
     }
 
-    public JSONparser(String direction, String emcJsonFile, String hrmURL, String hrmOUTCSVFile, String filterFieldName, String filterValues) throws DataFormatException,IOException {
+    public JSONparser(String direction, String emcJsonFile, String hrmURL, String hrmOUTCSVFile, String filterFieldName, String filterValues) throws DataFormatException, IOException {
         //Онлайн конструктор для чтения HRM-JSON  из URL и чтение EMC-JSON из фалов
         DateFormat dateFormat = new SimpleDateFormat("_yyyy-MM-dd-HH-mm-ss");
         Date date = new Date();
@@ -90,6 +91,35 @@ public class JSONparser {
         this.setHrmCSVFile(hrmOUTCSVFile);
         this.setFilterFieldName(filterFieldName);
         this.setFilterValues(filterValues);
+    }
+
+    private JSONparser(String direction, String emcURL, String emcOUTCSVFile, String hrmURL, String hrmOUTCSVFile, String filterFieldName, String filterValues) throws IOException, DataFormatException {
+
+        //Онлайн конструктор для чтения HRM-JSON  из URL и чтение EMC-JSON из URL
+        DateFormat dateFormat = new SimpleDateFormat("_yyyy-MM-dd-HH-mm-ss");
+        Date date = new Date();
+        String currentDate = dateFormat.format(date);
+        this.wholeFile = Boolean.TRUE;
+
+        if (direction.toLowerCase().contains("multiemc")) {
+            throw new UnsupportedOperationException("Unsupported direction multiEMC. Cannot read from online EMC data for multiple  companies only one.");
+        }
+        this.setSourceHRData(direction);//EMC-HRM, EMC, HRM
+
+        if (direction.toLowerCase().contains("emc")) {
+            this.setEmcJsonFile(emcOUTCSVFile.replace(".csv", ".json.TMP"));
+            this.getJSONFromURL(emcURL, getEmcJsonFile());
+            this.setEmcCSVFile(emcOUTCSVFile);
+        }
+        if (direction.toLowerCase().contains("hrm")) {
+            this.setHrmJsonFile(hrmOUTCSVFile.replace(".csv", ".json.TMP"));
+            this.getJSONFromURL(hrmURL, getHrmJsonFile());
+            this.setHrmCSVFile(hrmOUTCSVFile);
+        }
+
+        this.setFilterFieldName(filterFieldName);
+        this.setFilterValues(filterValues);
+
     }
 
     public void run() throws IOException {
@@ -310,6 +340,10 @@ public class JSONparser {
         this.emcJsonFile = emcJsonFile;
     }
 
+    public String getEmcJsonFile() {
+        return this.emcJsonFile;
+    }
+
     public void setEmcCSVFile(String emcCSVFile) {
         this.emcCSVFile = emcCSVFile;
     }
@@ -475,6 +509,7 @@ public class JSONparser {
     }
 
     public String[] EMCJsonToArray() throws IOException {
+        System.out.println("Из EMC анализируются только активные пользователи у которых есть логины");
 
         JSONObject obj = new JSONObject(this.StringFromStream());
         JSONObject objGetByKey = obj.getJSONObject("result");
@@ -635,8 +670,8 @@ public class JSONparser {
                         if (keys[p].equalsIgnoreCase("extensions") || keys[p].equalsIgnoreCase("settings")) {
                             toAdd = "";
                         }
-                        
-                        toAdd=toAdd.replace(",", "");   //Добавил подмену "," на пусто в найденных данных
+
+                        toAdd = toAdd.replace(",", "");   //Добавил подмену "," на пусто в найденных данных
 
                     }
 
@@ -668,7 +703,7 @@ public class JSONparser {
             }
         }
         System.out.println(hmap.size());
-        jsonMapEMC = hmap;
+        this.jsonMapEMC = hmap;
 
         System.out.println(jsonMapHRM.isEmpty());
         if (jsonMapHRM.isEmpty() == false) {
@@ -794,14 +829,23 @@ public class JSONparser {
         } else {
             String[] arrayInputData = inputString.toLowerCase().split(delimiter);
             for (int i = 0; i < arrayInputData.length; i++) {
+                if (!arrayInputData[i].matches("[^0-9]+$")) {
+                    //Если входящая строка состоит из цифр, тогда применяем строгое сравнение
+                    if (checkedValue.equals(arrayInputData[i])) {
+                        return true;
+                    } else {
+                        result = false;
+                    }
+
+                } else //Если входящая строка состоит не только из цифр, тогда применяем строгую проверку + проверку на содержит ли
                 if (checkedValue.equalsIgnoreCase(arrayInputData[i]) || checkedValue.toLowerCase().contains(arrayInputData[i])) {
                     return true;
                 } else {
                     result = false;
 
                 }
-
             }
+            // if (!searchString.matches("[^0-9]+$")) ...
         }
         return result;
     }
@@ -826,7 +870,7 @@ public class JSONparser {
         if (k != null) {
             System.out.println("Output csv number of rows:" + k.length);
             for (int i = 0; i < k.length; i++) {
-                System.out.println("k[i]=" + k[i]);
+                System.out.println("k[" + i + "]=" + k[i]);
                 if (k[i] != null) {
                     writer.println(this.cleanOfSpecSymbols(k[i]));
                 }
@@ -906,7 +950,7 @@ public class JSONparser {
 
     }
 
-    private void getJSONFromURL(String hrmURL, String hrmJsonFile) throws DataFormatException,IOException  {
+    private void getJSONFromURL(String hrmURL, String hrmJsonFile) throws DataFormatException, IOException {
 
         HTMLutils html = new HTMLutils();
         String content = new String(html.readFromUrl(hrmURL));
@@ -920,13 +964,17 @@ public class JSONparser {
 
     }
 
-    public static void main(String[] args) throws DataFormatException,IOException {
+    private static void initializeClientCertParam(String emcClientCertificateType, String emcClientCertificateFile, String emcClientCertificateSecret) throws UnsupportedEncodingException {
+
+        System.setProperty("javax.net.ssl.storetype", emcClientCertificateType);
+        System.setProperty("javax.net.ssl.keyStore", emcClientCertificateFile);
+        System.setProperty("javax.net.ssl.keyStorePassword", emcClientCertificateSecret);
+
+        //   System.setProperty("javax.net.debug", "ssl");
+    }
+
+    public static void main(String[] args) throws DataFormatException, IOException, UnsupportedEncodingException {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
-        //System.setProperty("javax.net.ssl.keyStore", "keystore.jks");
-        //System.setProperty("javax.net.ssl.trustStore", "/etc/ssl/certs/java/cacerts");
-        //System.setProperty("javax.net.ssl.keyStorePassword", "changeit");
-        //System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
-        //System.setProperty("javax.net.debug", "ssl");
 
         Properties prop = new Properties();
         InputStream input = null;
@@ -958,15 +1006,37 @@ public class JSONparser {
 
         System.out.println("hrmOUTCSVFile: " + prop.getProperty("hrmOUTCSVFile"));
         String hrmOUTCSVFile = prop.getProperty("hrmOUTCSVFile");
-        
-         System.out.println("#############################EOF#################################");
+
+        System.out.println("emcURL: " + prop.getProperty("emcURL"));
+        String emcURL = prop.getProperty("emcURL");
+
+        System.out.println("emcOUTCSVFile: " + prop.getProperty("emcOUTCSVFile"));
+        String emcOUTCSVFile = prop.getProperty("emcOUTCSVFile");
+
+        System.out.println("emcClientCertificateType: " + prop.getProperty("emcClientCertificateType"));
+        String emcClientCertificateType = prop.getProperty("emcClientCertificateType");
+
+        System.out.println("emcClientCertificatePath: " + prop.getProperty("emcClientCertificatePath"));
+        String emcClientCertificateFile = prop.getProperty("emcClientCertificatePath");
+
+        System.out.println("emcClientCertificateSecret: secret");
+        String emcClientCertificateSecret = prop.getProperty("emcClientCertificateSecret");
+
+        System.out.println("#############################EOF#################################");
 
         JSONparser json;
-        if (hrmURL != null) {
+        if (hrmURL != null && emcURL == null) {
+            System.out.println("hrmURL != null && emcURL==null");
 
             json = new JSONparser(direction, emcJsonFile, hrmURL, hrmOUTCSVFile, filterFieldName, filterValues);
 
+        } else if (hrmURL != null && emcURL != null) {
+            System.out.println("hrmURL != null && emcURL!=null");
+
+            initializeClientCertParam(emcClientCertificateType, emcClientCertificateFile, emcClientCertificateSecret);
+            json = new JSONparser(direction, emcURL, emcOUTCSVFile, hrmURL, hrmOUTCSVFile, filterFieldName, filterValues);
         } else {
+            System.out.println("Not (hrmURL != null && emcURL==null)");
 
             json = new JSONparser(direction, emcJsonFile, hrmJsonFile, filterFieldName, filterValues);
         }
