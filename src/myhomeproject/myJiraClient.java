@@ -24,25 +24,19 @@ import net.rcarz.jiraclient.JiraClient;
 import net.rcarz.jiraclient.JiraException;
 
 
+
 public class myJiraClient {
      public static void main(String[] args) throws JiraException {
 
-        BasicCredentials creds = new BasicCredentials("o.nekriach", "credentials");
-        JiraClient jira = new JiraClient("https://dyninno.atlassian.net", creds);
+        BasicCredentials creds = new BasicCredentials("user.name", "credentials");
+        JiraClient jira = new JiraClient("https://atlassian.net", creds);
 
         try {
             /* Retrieve issue TEST-123 from JIRA. We'll get an exception if this fails. */
             Issue issue = jira.getIssue("IAM-2");
             
             System.out.println(issue.getDescription());
-            
-//Search for issues */
-Issue.SearchResult sr = jira.searchIssues("assignee=o.nekriach");
-System.out.println("Total: " + sr.total);
-for (Issue i : sr.issues)
-System.out.println("Result: " + i);
-
-            /* Print the issue key. */
+            System.out.println("ToString: "+issue.toString());
             System.out.println(issue);
 
 //            /* You can also do it like this: */
@@ -188,20 +182,6 @@ System.out.println("Result: " + i);
         }
     }
 
-
-
-//    public Issue getIssue(String issueKey) throws Exception
-//    {
-//        final URI jiraServerUri = new URI("https://dyninno.atlassian.net");
-//        final JiraRestClient restClient = (JiraRestClient) new AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(jiraServerUri, "o.nekriach", "oN1kbo4]a");
-//        Promise issuePromise = restClient.getIssueClient().getIssue(issueKey);
-//        return Optional.ofNullable((Issue) issuePromise.claim()).orElseThrow(() -> new Exception("No such issue"));
-//    }
-//
-//
-//    
-
-
-    }
+ }
     
     
