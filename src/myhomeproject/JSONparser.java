@@ -512,9 +512,19 @@ public class JSONparser {
         System.out.println("Из EMC анализируются только активные пользователи у которых есть логины");
 
         JSONObject obj = new JSONObject(this.StringFromStream());
-        JSONObject objGetByKey = obj.getJSONObject("result");
+        JSONObject objGetByKey;
+        String emcApiVersion = "";
+        if (obj.getJSONObject("result").has("users")) {
+            objGetByKey = obj.getJSONObject("result").getJSONObject("users");
+            emcApiVersion = "V10";
+        } else {
+
+            objGetByKey = obj.getJSONObject("result");
+        }
+
         String[] ks = objGetByKey.keySet().toArray(new String[0]);
 
+        //Получаем заголовки полей для будущего csv файла
         JSONObject firstRow = new JSONObject();
         if (objGetByKey.isNull("1") == false) {
 
@@ -648,6 +658,13 @@ public class JSONparser {
 
                         }
 
+                        if (keys[p].equalsIgnoreCase("location")) {
+                            String location = getLocation(toAdd);
+                            //Замена исходного значения "location" 
+                            toAdd = location;
+
+                        }
+
                         if (keys[p].equalsIgnoreCase("roles")) {
                             String roles = toAdd.replace("[", "").replace("]", "").replace("\"", "");
                             //Замена исходного значения "roles" 
@@ -666,8 +683,8 @@ public class JSONparser {
                             toAdd = toAdd.replaceAll(this.delimiter, replaceSymbol);
                             //System.out.println("FIND!!!");
                         }
-                        //System.out.println(keys[p]);
-                        if (keys[p].equalsIgnoreCase("extensions") || keys[p].equalsIgnoreCase("settings")) {
+                        //Убираем не нужные значения данных из полей что не используем. 
+                        if (keys[p].equalsIgnoreCase("extensions") || keys[p].equalsIgnoreCase("settings") || keys[p].equalsIgnoreCase("availableCompanies")) {
                             toAdd = "";
                         }
 
@@ -682,6 +699,17 @@ public class JSONparser {
 
                         if (p < keys.length - 1) {
                             csvStringValues = csvStringValues + this.delimiter;
+                        } else {
+                            //TODO
+                            //Добавляем в конец, доролнительные данные
+                            if (obj2.isNull("emails") && obj2.isNull("locationId")) {
+                                String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
+                                String mainEmail = getMainEmail(inputData);
+                                csvStringValues = csvStringValues + this.delimiter + mainEmail;
+                                //Добавляем пустое значение для locationId
+                                csvStringValues = csvStringValues + this.delimiter + "";
+
+                            }
                         }
                     }
 
@@ -702,6 +730,13 @@ public class JSONparser {
                 checkResult = false;
             }
         }
+        // Для совместимости кода в завимости от версии EMC API и для V9 и для V10 , добавляем в 0 позицию хеш мап дополнительные поля в csvKeysString  
+        if (emcApiVersion != null && emcApiVersion.equalsIgnoreCase("V10")) {
+            csvKeysString = csvKeysString + this.delimiter + "emails,locationId";
+            returnArray[0] = csvKeysString;
+            hmap.replace("csvFieldNames", csvKeysString);
+        }
+
         System.out.println(hmap.size());
         this.jsonMapEMC = hmap;
 
@@ -751,75 +786,116 @@ public class JSONparser {
     }
 
     private String getCompanies(String toAdd) {
-        toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
-        JSONObject obj = new JSONObject(toAdd);
+        //System.out.println("getCompanies764=" + toAdd);
+       // System.out.println("length=" + toAdd.length());
         String companies = "";
-        String keySetIternextValue = "";
-        Iterator<String> keySetIter = obj.keys();
-        String[] keys = new String[obj.keySet().size()];
-        int k = 0;
-        while (keySetIter.hasNext()) {
-            keySetIternextValue = keySetIter.next();
-            companies = companies + obj.getString(keySetIternextValue.toString());
-            if (keySetIter.hasNext()) {
-                companies = companies + this.delimiter;
-            }
+        if (toAdd.length() > 2) {
+            toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
+            JSONObject obj = new JSONObject(toAdd);
+            String keySetIternextValue = "";
+            Iterator<String> keySetIter = obj.keys();
+            String[] keys = new String[obj.keySet().size()];
+            int k = 0;
+            while (keySetIter.hasNext()) {
+                keySetIternextValue = keySetIter.next();
+                if (this.isDigit(keySetIternextValue.toString())) {
+                    companies = companies + obj.getString(keySetIternextValue.toString());
+                } else {
+                    companies = companies + keySetIternextValue.toString();
+                }
+                if (keySetIter.hasNext()) {
+                    companies = companies + this.delimiter;
+                }
 
+            }
         }
+        //System.out.println("getCompanies784=" + companies);
         return companies;
     }
 
     private String getMainEmail(String toAdd) {
-        toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
-        JSONObject obj = new JSONObject(toAdd);
-        Map mainEmail = new HashMap<String, Integer>();
         String mainEmailStr = "";
+        if (toAdd.length() > 2) {
+            toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
+            JSONObject obj = new JSONObject(toAdd);
+            Map mainEmail = new HashMap<String, Integer>();
 
-        String keySetIternextValue = "";
-        Iterator<String> keySetIter = obj.keys();
-        String[] keys = new String[obj.keySet().size()];
-        int k = 0;
-        while (keySetIter.hasNext()) {
+            String keySetIternextValue = "";
+            Iterator<String> keySetIter = obj.keys();
+            String[] keys = new String[obj.keySet().size()];
+            int k = 0;
+            while (keySetIter.hasNext()) {
 
-            keySetIternextValue = keySetIter.next();
+                keySetIternextValue = keySetIter.next();
 
-            if (obj.get(keySetIternextValue.toString()) != null && !obj.get(keySetIternextValue.toString()).toString().isEmpty() && !obj.get(keySetIternextValue.toString()).toString().equalsIgnoreCase("null")) {
+                if (obj.get(keySetIternextValue.toString()) != null && !obj.get(keySetIternextValue.toString()).toString().isEmpty() && !obj.get(keySetIternextValue.toString()).toString().equalsIgnoreCase("null")) {
 
-                keys[k] = obj.get(keySetIternextValue.toString()).toString();
-                if (mainEmail.containsKey(obj.get(keySetIternextValue.toString()))) {
+                    keys[k] = obj.get(keySetIternextValue.toString()).toString();
+                    if (mainEmail.containsKey(obj.get(keySetIternextValue.toString()))) {
 
-                    int value = (int) mainEmail.get(obj.get(keySetIternextValue.toString()));
-                    mainEmail.replace(obj.get(keySetIternextValue.toString()), value + 1);
+                        int value = (int) mainEmail.get(obj.get(keySetIternextValue.toString()));
+                        mainEmail.replace(obj.get(keySetIternextValue.toString()), value + 1);
 
-                } else {
-                    mainEmail.put(obj.get(keySetIternextValue.toString()), 1);
+                    } else {
+                        mainEmail.put(obj.get(keySetIternextValue.toString()), 1);
 
+                    }
                 }
+                k = k + 1;
             }
-            k = k + 1;
-        }
 
-        if (!mainEmail.isEmpty()) {
+            if (!mainEmail.isEmpty()) {
 //            System.out.println("\nNumberofEmails=" + mainEmail.size());
 //            System.out.println(": keysLength=" + keys.length);
 
-            for (int i = keys.length; i > 0; i--) {
+                for (int i = keys.length; i > 0; i--) {
 
-                if (mainEmail.containsValue(i)) {
+                    if (mainEmail.containsValue(i)) {
 //                    System.out.println(mainEmail.toString());
 //                    System.out.println("Value=" + i);
 //                    System.out.println("MainEmail: "+keys[i-1]);
-                    mainEmailStr = keys[i - 1];
-                    break;
+                        mainEmailStr = keys[i - 1];
+                        break;
+
+                    }
 
                 }
 
             }
-
         }
-
         //System.out.println(mainEmailStr);
         return mainEmailStr.toLowerCase();
+    }
+
+    private String getEmailsJSONfromCompanies(String input) {
+//        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        String returnString = "";
+        if (input.length() > 2) {
+            JSONObject objOutput = new JSONObject(input);
+            JSONObject obj = new JSONObject(input);
+            String keySetIternextValue = "";
+            Iterator<String> keySetIter = obj.keys();
+            String[] keys = new String[obj.keySet().size()];
+            int k = 0;
+            while (keySetIter.hasNext()) {
+                keySetIternextValue = keySetIter.next();
+                objOutput.put(keySetIternextValue, obj.getJSONObject(keySetIternextValue).opt("email"));
+
+            }
+            //System.out.println("objOutput=" + objOutput);
+            returnString = objOutput.toString();
+        }
+        return returnString;
+    }
+
+    private String getLocation(String input) {
+        //       throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        String returnString = "";
+        if (input.length() > 2) {
+            JSONObject obj = new JSONObject(input);
+            returnString = obj.optString("label");
+        }
+        return returnString;
     }
 
     Boolean checkInList(String checkedValue, String inputString, String delimiter) {
@@ -971,6 +1047,15 @@ public class JSONparser {
         System.setProperty("javax.net.ssl.keyStorePassword", emcClientCertificateSecret);
 
         //   System.setProperty("javax.net.debug", "ssl");
+    }
+
+    public static boolean isDigit(String str) {
+        for (char c : str.toCharArray()) {
+            if (!Character.isDigit(c)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static void main(String[] args) throws DataFormatException, IOException, UnsupportedEncodingException {
