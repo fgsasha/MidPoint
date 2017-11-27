@@ -21,8 +21,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.util.Properties;
 import java.util.zip.DataFormatException;
 
@@ -702,7 +703,7 @@ public class JSONparser {
                         } else {
                             //TODO
                             //Добавляем в конец, доролнительные данные
-                            if (obj2.isNull("emails") && obj2.isNull("locationId")) {
+                            if (obj2.isNull("emails") && obj2.isNull("locationId")&&obj2.has("companies")) {
                                 String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
                                 String mainEmail = getMainEmail(inputData);
                                 csvStringValues = csvStringValues + this.delimiter + mainEmail;
@@ -1062,12 +1063,11 @@ public class JSONparser {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
 
         Properties prop = new Properties();
-        InputStream input = null;
-
-        input = new FileInputStream("jsonparser.properties");
+        
+        FileInputStream input = new FileInputStream(new File("jsonparser.properties"));
 
         // load a properties file
-        prop.load(input);
+        prop.load(new InputStreamReader(input, Charset.forName("UTF-8")));
 
         // get the property value and print it out
         System.out.println("#############################jsonparser.properties#################################");

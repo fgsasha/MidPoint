@@ -5,26 +5,20 @@
  */
 package hrdata;
 
-import com.sun.security.ntlm.Client;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import static javax.management.Query.gt;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSession;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
  *
@@ -84,27 +78,6 @@ public class HTMLutils {
 
     void connectToJIRA(String connectigURL) throws MalformedURLException, ProtocolException, IOException
     {
-//    String data = "{ \"fields\": { \"assignee\":{\"name\":\"admin\"} }}";
-//    URL jiraURL;
-//    //jiraURL= new URL("http://localhost:8080/rest/api/2/issue/TEST-12") ;
-//    jiraURL= new URL("https://dyninno.atlassian.net/rest/api/2/issue/IAM-1");
-//            HttpURLConnection connection = (HttpURLConnection)jiraURL.openConnection();
-//            connection.setRequestMethod("GET");
-//            connection.setRequestProperty("Accept", "*/*");
-//            connection.setRequestProperty("Content-Type", "application/json");
-//            connection.setDoOutput(true);
-//            connection.setDoInput(true);
-//            String userCredentials = "onekriach@dynatech.lv:dyninnoFyyeirf1980!";
-//            String basicAuth = "Basic " + new String(Base64.getEncoder().encode(userCredentials.getBytes()));
-//            connection.setRequestProperty ("Authorization", basicAuth);
-//            connection.connect();
-//            OutputStreamWriter wr = new OutputStreamWriter(connection.getOutputStream(),StandardCharsets.UTF_8);
-//            wr.write(data.toString());
-//           wr.flush();
-//           wr.close();
-//           Reader in = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
-//            for (int c; (c = in.read()) >= 0; System.out.print((char)c));
-
     }
     
     public static void main(String[] args) throws IOException {
@@ -119,8 +92,6 @@ public class HTMLutils {
         HTMLutils htmlOutput = new HTMLutils();
         htmlOutput.connectToJIRA("");
 
-        //String readFromUrl = htmlOutput.readFromUrl("https://dyninno.atlassian.net/secure/MyJiraHome.jspa");
-        //System.out.println("readFromUrl: " + readFromUrl);
     }
 
 }
