@@ -10,6 +10,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -38,7 +40,9 @@ public class JiraEmployeesData {
 
     private final JiraClient ctx;
     private final BasicCredentials creds;
+    private String file="";
     private Map fMap = new HashMap();
+    private Map valuesMap = new HashMap();
 
     /**
      *
@@ -46,9 +50,10 @@ public class JiraEmployeesData {
      * @param secret the value of secret
      * @throws JiraException
      */
-    public JiraEmployeesData(String jiraURL, String secret) throws JiraException, RestException, IOException, URISyntaxException {
+    public JiraEmployeesData(String jiraURL, String secret, String fileName) throws JiraException, RestException, IOException, URISyntaxException {
         creds = new BasicCredentials("iam.security", secret);
-        ctx = new JiraClient(jiraURL, creds);
+        ctx = new JiraClient(jiraURL, creds); 
+        file = fileName;
 
     }
 
@@ -59,11 +64,15 @@ public class JiraEmployeesData {
 
         String fieldList = this.getFieldsList();
         ArrayList allEmp = this.getAllEmployees();
+        
+        valuesMap.put("fieldList", fieldList);
 
         for (int k = 0; k < allEmp.size(); k++) {
-            Issue issue = (Issue) allEmp.get(k);
-            getOneEmployeeRecord(issue, fieldList);
+            Issue issue = (Issue) allEmp.get(k);            
+             valuesMap.put(issue.getKey() , this.getOneEmployeeRecord(issue, fieldList));
         }
+        
+        this.exportDataToCSV(file);
 
         // display time and date using toString()
         System.out.println("Finished at: " + new Date().toString());
@@ -71,7 +80,7 @@ public class JiraEmployeesData {
 
     public ArrayList getAllEmployees() throws JiraException {
 
-        ArrayList al = new ArrayList();
+        ArrayList all = new ArrayList();
 
 //            /* Search for issues */
         Issue.SearchResult sr = ctx.searchIssues("project=HREM");
@@ -79,11 +88,11 @@ public class JiraEmployeesData {
         Iterator<Issue> it = sr.iterator();
         while (it.hasNext()) {
             Issue issueSR = it.next();
-            al.add(issueSR);
+            all.add(issueSR);
             System.out.println("issueSR: " + issueSR.getKey() + " : "
                     + issueSR.getSummary());
         }
-        return al;
+        return all;
 
     }
 
@@ -166,11 +175,25 @@ public class JiraEmployeesData {
             }
 
         }
-        System.out.println(output);
+        //System.out.println(output);
     return output;
     }
 
-    public void exportDataToCSV() {
+    public void exportDataToCSV(String fileName) throws FileNotFoundException, UnsupportedEncodingException {
+       PrintWriter writer = new PrintWriter(fileName, "UTF-8");
+       
+       if(!valuesMap.isEmpty()){
+           writer.println(valuesMap.get("fieldList"));
+           Iterator key = valuesMap.keySet().iterator();
+           while(key.hasNext()){
+               String keyElement=(String) key.next();
+               String value=(String) valuesMap.get(keyElement);
+               writer.println(value);
+           }
+           
+           
+       }
+       writer.close();
 
     }
 
@@ -191,8 +214,10 @@ public class JiraEmployeesData {
         String jiraURL = prop.getProperty("jiraURL");
         System.out.println("jiraSecret: " + "secret");
         String secret = prop.getProperty("jiraSecret");
+        System.out.println("fileName: " + prop.getProperty("fileName"));
+        String fileName = prop.getProperty("fileName");       
 
-        JiraEmployeesData jira = new JiraEmployeesData(jiraURL, secret);
+        JiraEmployeesData jira = new JiraEmployeesData(jiraURL, secret, fileName);
         jira.run();
 
     }
