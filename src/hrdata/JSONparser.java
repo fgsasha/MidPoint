@@ -54,6 +54,7 @@ public class JSONparser {
     private Map jsonMapEMC = new HashMap< String, String>();
     private Map jsonMapHRM = new HashMap< String, String>();
     private String[] outputArray;
+    private String personId = "99999999999";
 
     public JSONparser(String direction, String emcJsonFile, String hrmJsonFile, String filterFieldName, String filterValues) {
         //Офлайн Конструктор для чтения из фалов
@@ -425,6 +426,10 @@ public class JSONparser {
             }
             k = k + 1;
         }
+        
+        //Добавляем дополнительный ключ для поля "employeeID" в конец строки
+        csvKeysString=csvKeysString+this.delimiter+"employeeID";
+                       
         //System.out.println(csvKeysString);
 
         if (this.wholeFile) {
@@ -467,9 +472,17 @@ public class JSONparser {
                 for (int p = 0; p < keys.length; p++) {
                     pid = arrayJson.get("PID").toString();
                     csvStringValues = csvStringValues + arrayJson.get(keys[p].trim()).toString().replace(",", "");   //Добавил подмену "," в найденных данных
+  
                     if (p < keys.length - 1) {
                         csvStringValues = csvStringValues + this.delimiter;
                     }
+                    
+                    //Добавляем значение для поля "employeeID" в конец строки
+                    if (p == keys.length - 1){
+                    ConvertUtils cu = new ConvertUtils();
+                    csvStringValues=csvStringValues+this.delimiter+cu.getHrIdNumberRev(personId, pid);
+                    }
+                    
 
                 }
             }

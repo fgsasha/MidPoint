@@ -5,7 +5,6 @@
  */
 package hrdata;
 
-import java.math.BigInteger;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -50,7 +49,28 @@ public class ConvertUtils {
         return StringUtils.leftPad(toBase36(numToConvert), length, ZERO);
     }
 
-    public String getHrIdNumber(String personId, String salt) {
+//    public String getHrIdNumber(String personId, String salt) {
+//        String hrIdNumber = "";
+//        String idSup = personId.replaceAll("[^\\d]", "");
+//        //System.out.println("idSup="+idSup);
+//
+//        String empSup = salt.replaceAll("[^\\d]", "");
+//        //System.out.println("empSup="+empSup);
+//
+//        BigInteger idSupB = new BigInteger(idSup);
+//        BigInteger empSupB = new BigInteger(empSup);
+//        BigInteger sum;
+//        sum = idSupB.add(empSupB);
+//        //System.out.println("sum="+sum);
+//
+//        long longNumber = Long.parseLong(sum.toString());
+//        hrIdNumber = this.toBase36(longNumber, 12);
+//        //System.out.println("Base36="+hrIdNumber);
+//
+//        return hrIdNumber;
+//    }
+
+    public String getHrIdNumberRev(String personId, String salt) {
         String hrIdNumber = "";
         String idSup = personId.replaceAll("[^\\d]", "");
         //System.out.println("idSup="+idSup);
@@ -58,24 +78,52 @@ public class ConvertUtils {
         String empSup = salt.replaceAll("[^\\d]", "");
         //System.out.println("empSup="+empSup);
 
-        BigInteger idSupB = new BigInteger(idSup);
-        BigInteger empSupB = new BigInteger(empSup);
-        BigInteger sum;
-        sum = idSupB.add(empSupB);
-        //System.out.println("sum="+sum);
-
-        long longNumber = Long.parseLong(sum.toString());
-        hrIdNumber = this.toBase36(longNumber, 8);
+        long longNumber = Long.parseLong(this.encodeString(idSup, empSup));
+        //System.out.println("longNumber="+longNumber);
+        hrIdNumber = this.toBase36(longNumber, 12);
         //System.out.println("Base36="+hrIdNumber);
 
         return hrIdNumber;
     }
 
+    public String encodeString(String personId, String salt) {
+        String output = null;
+        String reversePersonId = new StringBuffer(personId).reverse().toString();
+        //System.out.println("reversePersonId="+reversePersonId);
+        String saltSub=null;
+        if(salt.length() > 6){
+        int cut=salt.length()-6;
+        saltSub = salt.substring(cut);
+        } else {
+        saltSub=salt;
+        }
+        //System.out.println("saltSub="+saltSub);
+        char[] ret_arr = new char[reversePersonId.length() + saltSub.length()];
+        char[] id_arr = reversePersonId.toCharArray();
+        char[] s_arr = saltSub.toCharArray();
+        int k = 0;
+        int l = 0;
+        for (int i = 0; i < reversePersonId.length(); i++) {
+            if (i % 2 == 0 && l < saltSub.length()) {
+                ret_arr[k] = s_arr[l];
+                l = l + 1;
+                k = k + 1;
+            }
+            ret_arr[k] = id_arr[i];
+            k = k + 1;
+        }
+        output=new String(ret_arr);      
+
+        return output;
+    }
+
     public static void main(String[] args) {
-        String personId = "450199-15120";
-        String salt = "2017-11-07";
+        String personId = "99999999999";
+        String salt = "123456789";//"25" "960"
         ConvertUtils c = new ConvertUtils();
-        System.out.println("getHrIdNumber=" + c.getHrIdNumber(personId, salt));
+
+        //System.out.println("getHrIdNumber=" + c.getHrIdNumberRev(personId, salt));
+        //System.out.println("getHrIdNumber=" + c.encodeString(personId, salt));
     }
 
 }
