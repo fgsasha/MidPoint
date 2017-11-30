@@ -43,6 +43,7 @@ public class JiraEmployeesData {
     private String file="";
     private Map fMap = new HashMap();
     private Map valuesMap = new HashMap();
+    String delimiter=",";
 
     /**
      *
@@ -110,7 +111,7 @@ public class JiraEmployeesData {
 
     public String getFieldsList() {
         //String fieldList="Summary,Issue key,Issue id,Issue Type,Status,Project key,Project name,Project type,Project lead,Project description,Project url,Assignee,Reporter,Creator,Created,Updated,Last Viewed,Resolved,Due Date,Environment,Original Estimate,Remaining Estimate,Time Spent,Work Ratio,Σ Original Estimate,Σ Remaining Estimate,Σ Time Spent,Security Level,Employment Request,Linked Profile,Remunerations,Vacations,Attachment,1-month check,2-months check,2-weeks check,3-months final check,Actual Address,Birthday,Brand,Business Email,Cell Phone,City,Co-manager,Company,Department,Development,Dismissal,Employee,Employee Review,Employment,End of Trial,Epic Color,Epic Link,Epic Name,Epic Status,External issue ID,First Name,Former Name,Home Phone,ID Code,Impact,Investigation reason,Last Name,Manager,Middle Name,New Position,Notes,Operational categorization,Original Form,Pending reason,Personal Email,Position,Postal Code,Queue,Raised during,Rank,Reference,Registered Address,Request Type,Request participants,Residency,Root cause,Satisfaction rating,Skype,Story Points,Supervisors,Test sessions,Testing status,Urgency,Vacation,Workplace,[CHART] Date of First Response,Comment";
-        String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position";
+        String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position";
         return fieldList;
     }
 
@@ -125,6 +126,15 @@ public class JiraEmployeesData {
             output = issue.getIssueType().toString();
         } else if (name.equalsIgnoreCase("Status")) {
             output = issue.getStatus().toString();
+        } else if (name.equalsIgnoreCase("Business Email")) {
+            output = issue.getField(getFieldKeyByName(name).toString()).toString();
+            if(output.isEmpty()||output.equals("null"))
+            {
+            output = issue.getField(getFieldKeyByName("Employee").toString()).toString();
+            if (output.contains("/rest/api/2/user?username")) {
+                    output = new JSONObject(output).getString("emailAddress").toString();
+                }
+            }    
         } else if (!(this.getFieldKeyByName(name) == null || this.getFieldKeyByName(name).isEmpty())) {
 
             //System.out.println(name+" : "+this.getFieldKeyByName(name));
@@ -138,6 +148,7 @@ public class JiraEmployeesData {
                 }
             }
         }
+        output=output.replace(delimiter, "").replace("null", "").replace("?","");
         return output;
     }
 
@@ -165,13 +176,13 @@ public class JiraEmployeesData {
 
     public String getOneEmployeeRecord(Issue issue, String fieldList) throws RestException, IOException, URISyntaxException {
         String output = "";
-        for (int i = 0; i < fieldList.split(",").length; i++) {
+        for (int i = 0; i < fieldList.split(delimiter).length; i++) {
             //System.out.println(fieldList.split(",")[i] + "=" + this.getFieldValue(fieldList.split(",")[i], issue));
 
-            if (i < fieldList.split(",").length - 1) {
-                output = output + this.getFieldValue(fieldList.split(",")[i], issue) + ",";
+            if (i < fieldList.split(delimiter).length - 1) {
+                output = output + this.getFieldValue(fieldList.split(delimiter)[i], issue) + delimiter;
             } else {
-                output = output + this.getFieldValue(fieldList.split(",")[i], issue);
+                output = output + this.getFieldValue(fieldList.split(delimiter)[i], issue);
             }
 
         }
@@ -187,8 +198,10 @@ public class JiraEmployeesData {
            Iterator key = valuesMap.keySet().iterator();
            while(key.hasNext()){
                String keyElement=(String) key.next();
+               if(!keyElement.equals("fieldList")){
                String value=(String) valuesMap.get(keyElement);
                writer.println(value);
+               }
            }
            
            
