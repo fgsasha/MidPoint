@@ -13,7 +13,10 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -54,13 +57,14 @@ public class JiraEmployeesData {
 
     }
 
-    public void run() throws JiraException, RestException, IOException, URISyntaxException {
+    public void run() throws JiraException, RestException, IOException, URISyntaxException, ParseException {
 
         // display time and date using toString()
         System.out.println("Started at: " + new Date().toString());
 
         String fieldList = this.getFieldsList();
         ArrayList allEmp = this.getAllEmployees();
+        allEmp = this.getUniqueEmployees(allEmp);
 
         valuesMap.put("fieldList", fieldList);
 
@@ -93,15 +97,97 @@ public class JiraEmployeesData {
 
     }
 
-    public void getActiveEmployees() {
+    public ArrayList getActiveEmployees() throws JiraException {
+        ArrayList all = new ArrayList();
 
+        ///* Search for issues  - only active employees/
+        Issue.SearchResult sr = ctx.searchIssues("project=HREM and Status!=Dismissed");
+        System.out.println("Total: " + sr.total);
+        Iterator<Issue> it = sr.iterator();
+        while (it.hasNext()) {
+            Issue issueSR = it.next();
+            all.add(issueSR);
+            System.out.println("issueSR: " + issueSR.getKey() + " : "
+                    + issueSR.getSummary());
+        }
+        return all;
     }
 
-    public void getNotActiveEmployees() {
+    public ArrayList getFiredEmployees() throws JiraException {
+        ArrayList all = new ArrayList();
 
+        ///* Search for issues - only dismissed employees/
+        Issue.SearchResult sr = ctx.searchIssues("project=HREM and Status=Dismissed");
+        System.out.println("Total: " + sr.total);
+        Iterator<Issue> it = sr.iterator();
+        while (it.hasNext()) {
+            Issue issueSR = it.next();
+            all.add(issueSR);
+            System.out.println("issueSR: " + issueSR.getKey() + " : "
+                    + issueSR.getSummary());
+        }
+        return all;
     }
 
-    public void getUniqueEmployees() {
+    public ArrayList getUniqueEmployees(ArrayList allemp) throws RestException, IOException, URISyntaxException, ParseException {
+        ArrayList output = new ArrayList();
+        Map mapL1 = new HashMap();
+
+        String idCode = "";
+        for (int k = 0; k < allemp.size(); k++) {
+            Issue issue = (Issue) allemp.get(k);
+            // group employees by their ID Code and get their status
+            idCode = this.getFieldValue("ID Code", issue);
+            String status = "";
+            if (this.getFieldValue("Status", issue).equalsIgnoreCase("Dismissed")) {
+                status = this.getFieldValue("Dismissal", issue);
+            } else {
+                //status= this.getFieldValue("Status", issue);
+                status = "Employed"; // for easiest searching
+            }
+
+            Map mapL2 = new HashMap();
+            if (mapL1.containsKey(idCode)) {
+
+                mapL2 = (Map) mapL1.get(idCode);
+                mapL2.put(issue, status);
+                mapL1.replace(idCode, mapL2);
+            } else {
+                mapL2.put(issue, status);
+                mapL1.put(idCode, mapL2);
+            }
+        }
+        //Get  unique employees issue cosidering employees status. For one employee only one record
+        Iterator keys = mapL1.keySet().iterator();
+        while (keys.hasNext()) {
+            String idCodeL1 = (String) keys.next();
+            Map mapL2 = new HashMap();
+            mapL2 = (Map) mapL1.get(idCodeL1);
+            Iterator keysL2 = mapL2.keySet().iterator();
+
+            while (keysL2.hasNext()) {
+                Issue key = (Issue) keysL2.next();
+
+                if (mapL2.containsValue("Employed")) {
+                    if (mapL2.get(key).toString().equalsIgnoreCase("Employed")) {
+                        output.add(key);
+                        break;
+                    }
+                } else {
+                    //TODO
+                    String recent = this.getRecent(mapL2.values());
+                    if (mapL2.get(key).toString().equalsIgnoreCase(recent)) {
+                        output.add(key);
+                        break;
+                    }
+
+                }
+
+            }
+
+        }
+
+        return output;
 
     }
 
@@ -213,7 +299,7 @@ public class JiraEmployeesData {
 
     }
 
-    public static void main(String[] args) throws JiraException, FileNotFoundException, IOException, RestException, URISyntaxException {
+    public static void main(String[] args) throws JiraException, FileNotFoundException, IOException, RestException, URISyntaxException, ParseException {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
 
         Properties prop = new Properties();
@@ -236,6 +322,24 @@ public class JiraEmployeesData {
         JiraEmployeesData jira = new JiraEmployeesData(jiraURL, secret, fileName);
         jira.run();
 
+    }
+
+    private String getRecent(Collection values) throws ParseException {
+        String output="";
+        Date outputDate = null;
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        Iterator iter = values.iterator();
+        //2017-11-10
+        while(iter.hasNext()){
+            Date date = formatter.parse((String) iter.next());
+            if(outputDate==null || date.before(outputDate)){
+            outputDate=date;            
+            }
+         }     
+        output=formatter.format(outputDate);
+        System.out.println("output="+output);
+        return output;
     }
 
 }
