@@ -120,8 +120,7 @@ public class LinuxUserStatus {
 
         } else {
             throw new Error("!!! You shoud be root/have sudo to run script or use offline file user_passwd-s.txt !!!");
-        }
-        br.close();
+        }     
     }
 
     Boolean checkPermisions() throws IOException {

@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import net.rcarz.jiraclient.BasicCredentials;
 import net.rcarz.jiraclient.Issue;
@@ -41,7 +42,8 @@ public class JiraEmployeesData {
     private String file = "";
     private Map fMap = new HashMap();
     private Map valuesMap = new HashMap();
-    String delimiter = ",";
+    static String delimiter = ",";
+    private static String primaryHREMID;
 
     /**
      *
@@ -162,13 +164,15 @@ public class JiraEmployeesData {
             String idCodeL1 = (String) keys.next();
             Map mapL2 = new HashMap();
             mapL2 = (Map) mapL1.get(idCodeL1);
-            Iterator keysL2 = mapL2.keySet().iterator();
-
-            while (keysL2.hasNext()) {
-                Issue key = (Issue) keysL2.next();
-
+            Set keysL2 = mapL2.keySet();
+            Iterator keysL2It = keysL2.iterator();
+            
+            while (keysL2It.hasNext()) {
+                Issue key = (Issue) keysL2It.next();
+                
                 if (mapL2.containsValue("Employed")) {
-                    if (mapL2.get(key).toString().equalsIgnoreCase("Employed")) {
+                    String desiredKey = this.getDesiredKeyForEnabledUser(mapL2);
+                    if (mapL2.get(key).toString().equalsIgnoreCase("Employed") && key.getKey().equals(desiredKey)) {
                         output.add(key);
                         break;
                     }
@@ -310,34 +314,77 @@ public class JiraEmployeesData {
         prop.load(input);
 
         // get the property value and print it out
-        System.out.println("#############################jsonparser.properties#################################");
+        System.out.println("############################# jsonparser.properties #################################");
         System.out.println("jiraURL: " + prop.getProperty("jiraURL"));
         String jiraURL = prop.getProperty("jiraURL");
         System.out.println("jiraSecret: " + "secret");
         String secret = prop.getProperty("jiraSecret");
         System.out.println("fileName: " + prop.getProperty("fileName"));
         String fileName = prop.getProperty("fileName");
+        System.out.println("primaryHREMID: " + prop.getProperty("primaryHREMID"));
+        primaryHREMID = prop.getProperty("primaryHREMID");
+        System.out.println("######################################################################################");
 
         JiraEmployeesData jira = new JiraEmployeesData(jiraURL, secret, fileName);
         jira.run();
+        System.out.println(fileName);
 
     }
 
     private String getRecent(Collection values) throws ParseException {
-        String output="";
+        String output = "";
         Date outputDate = null;
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         Iterator iter = values.iterator();
         //2017-11-10
-        while(iter.hasNext()){
+        while (iter.hasNext()) {
             Date date = formatter.parse((String) iter.next());
-            if(outputDate==null || date.before(outputDate)){
-            outputDate=date;            
+            if (outputDate == null || date.before(outputDate)) {
+                outputDate = date;
             }
-         }     
-        output=formatter.format(outputDate);
-        System.out.println("output="+output);
+        }
+        output = formatter.format(outputDate);
+
+        return output;
+    }
+
+    private String getDesiredKeyForEnabledUser(Map mapL2) {
+        String output = "";
+        ArrayList al = new ArrayList();
+        //ArrayList toCompare=new ArrayList();
+
+        if (primaryHREMID!=null) {
+            String[] pr_arr = primaryHREMID.toLowerCase().split(delimiter);
+            for(int f=0; f < pr_arr.length; f++){
+            al.add(pr_arr[f]);
+            }
+        }
+        Set keysL2 = mapL2.keySet();
+        Iterator keysL2It = keysL2.iterator();
+        while (keysL2It.hasNext()) {
+            Issue issue = (Issue) keysL2It.next();
+            if(mapL2.get(issue).toString().equalsIgnoreCase("Employed")){
+            String issueKey = issue.getKey();
+            if (!al.isEmpty() && al.contains(issueKey.toLowerCase())) {
+                output = issueKey;
+                break;
+            } else {
+
+                if (output.isEmpty()) {
+                    output = issueKey;
+                } else {
+                    int int1 = Integer.parseInt(output.replaceAll("[^\\d]", ""));
+                    int int2 = Integer.parseInt(issueKey.replaceAll("[^\\d]", ""));
+                    if (int2 < int1) {
+                        output = issueKey;
+                    }
+                }
+            }
+            
+        }
+        }
+
         return output;
     }
 
