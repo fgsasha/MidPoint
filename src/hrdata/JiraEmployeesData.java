@@ -5,7 +5,6 @@
  */
 package hrdata;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -255,7 +254,7 @@ public class JiraEmployeesData {
                 String value = jso.getString("name");
                 //System.out.println("name="+value);
                 if (name.equalsIgnoreCase(value)) {
-                    output = jso.getString("key");
+                    output = jso.getString("id"); //OLD value was a "key". Cloud version has key but standalone instance has "id"
                     break;
                 }
             }
