@@ -428,7 +428,7 @@ public class JSONparser {
         }
         
         //Добавляем дополнительный ключ для поля "employeeID" в конец строки
-        csvKeysString=csvKeysString+this.delimiter+"employeeID";
+        csvKeysString=csvKeysString+this.delimiter+"hrmEmployeeID";
                        
         //System.out.println(csvKeysString);
 
