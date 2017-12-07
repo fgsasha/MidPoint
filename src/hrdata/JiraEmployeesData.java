@@ -166,10 +166,10 @@ public class JiraEmployeesData {
             mapL2 = (Map) mapL1.get(idCodeL1);
             Set keysL2 = mapL2.keySet();
             Iterator keysL2It = keysL2.iterator();
-            
+
             while (keysL2It.hasNext()) {
                 Issue key = (Issue) keysL2It.next();
-                
+
                 if (mapL2.containsValue("Employed")) {
                     String desiredKey = this.getDesiredKeyForEnabledUser(mapL2);
                     if (mapL2.get(key).toString().equalsIgnoreCase("Employed") && key.getKey().equals(desiredKey)) {
@@ -196,7 +196,7 @@ public class JiraEmployeesData {
 
     public String getFieldsList() {
         //String fieldList="Summary,Issue key,Issue id,Issue Type,Status,Project key,Project name,Project type,Project lead,Project description,Project url,Assignee,Reporter,Creator,Created,Updated,Last Viewed,Resolved,Due Date,Environment,Original Estimate,Remaining Estimate,Time Spent,Work Ratio,Σ Original Estimate,Σ Remaining Estimate,Σ Time Spent,Security Level,Employment Request,Linked Profile,Remunerations,Vacations,Attachment,1-month check,2-months check,2-weeks check,3-months final check,Actual Address,Birthday,Brand,Business Email,Cell Phone,City,Co-manager,Company,Department,Development,Dismissal,Employee,Employee Review,Employment,End of Trial,Epic Color,Epic Link,Epic Name,Epic Status,External issue ID,First Name,Former Name,Home Phone,ID Code,Impact,Investigation reason,Last Name,Manager,Middle Name,New Position,Notes,Operational categorization,Original Form,Pending reason,Personal Email,Position,Postal Code,Queue,Raised during,Rank,Reference,Registered Address,Request Type,Request participants,Residency,Root cause,Satisfaction rating,Skype,Story Points,Supervisors,Test sessions,Testing status,Urgency,Vacation,Workplace,[CHART] Date of First Response,Comment";
-        String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,HRUID";
+        String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID";
         return fieldList;
     }
 
@@ -219,7 +219,7 @@ public class JiraEmployeesData {
                     output = new JSONObject(output).getString("emailAddress").toString();
                 }
             }
-        } else if (name.equalsIgnoreCase("HRUID")) {
+        } else if (name.equalsIgnoreCase("jiraEmployeeID")) {
             String personId = issue.getField(getFieldKeyByName("ID Code").toString()).toString();
             String salt = issue.getField(getFieldKeyByName("Birthday").toString()).toString();
             if (!personId.equals("null") && !salt.equals("null")) {
@@ -354,24 +354,22 @@ public class JiraEmployeesData {
         ArrayList al = new ArrayList();
         //ArrayList toCompare=new ArrayList();
 
-        if (primaryHREMID!=null) {
+        if (primaryHREMID != null) {
             String[] pr_arr = primaryHREMID.toLowerCase().split(delimiter);
-            for(int f=0; f < pr_arr.length; f++){
-            al.add(pr_arr[f]);
+            for (int f = 0; f < pr_arr.length; f++) {
+                al.add(pr_arr[f]);
             }
         }
         Set keysL2 = mapL2.keySet();
         Iterator keysL2It = keysL2.iterator();
         while (keysL2It.hasNext()) {
             Issue issue = (Issue) keysL2It.next();
-            if(mapL2.get(issue).toString().equalsIgnoreCase("Employed")){
-            String issueKey = issue.getKey();
-            if (!al.isEmpty() && al.contains(issueKey.toLowerCase())) {
-                output = issueKey;
-                break;
-            } else {
-
-                if (output.isEmpty()) {
+            if (mapL2.get(issue).toString().equalsIgnoreCase("Employed")) {
+                String issueKey = issue.getKey();
+                if (!al.isEmpty() && al.contains(issueKey.toLowerCase())) {
+                    output = issueKey;
+                    break;
+                } else if (output.isEmpty()) {
                     output = issueKey;
                 } else {
                     int int1 = Integer.parseInt(output.replaceAll("[^\\d]", ""));
@@ -380,9 +378,8 @@ public class JiraEmployeesData {
                         output = issueKey;
                     }
                 }
+
             }
-            
-        }
         }
 
         return output;
