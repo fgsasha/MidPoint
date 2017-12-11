@@ -213,6 +213,9 @@ public class JiraEmployeesData {
             output = issue.getStatus().toString();
         } else if (name.equalsIgnoreCase("Business Email")) {
             output = issue.getField(getFieldKeyByName(name).toString()).toString();
+            if(output!=null && !output.contains("@")){
+            output="";
+            }
             if (output.isEmpty() || output.equals("null")) {
                 output = issue.getField(getFieldKeyByName("Employee").toString()).toString();
                 if (output.contains("/rest/api/2/user?username")) {
