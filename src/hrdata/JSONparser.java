@@ -770,14 +770,17 @@ public class JSONparser {
         toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
         JSONArray array = new JSONArray(toAdd);
         String photos = "";
-
+        //System.out.println("toAdd: "+toAdd);
         for (int i = 0; i < array.length(); i++) {
             JSONObject obj = array.getJSONObject(i);
-            photos = photos + obj.getString("photo");
+            photos = photos + obj.optString("photo");
             if (i < array.length() - 1) {
                 photos = photos + this.delimiter;
             }
-
+          
+        }
+        if(photos.equals("false")){
+        photos=photos.replace("false", "");
         }
         return photos;
     }
