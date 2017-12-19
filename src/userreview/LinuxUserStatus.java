@@ -120,7 +120,7 @@ public class LinuxUserStatus {
 
         } else {
             throw new Error("!!! You shoud be root/have sudo to run script or use offline file user_passwd-s.txt !!!");
-        }     
+        }
     }
 
     Boolean checkPermisions() throws IOException {
@@ -245,10 +245,13 @@ public class LinuxUserStatus {
         //locked password (L), has no password (NP), has a usable password (P), has a usable password older 90 days (P90)
         System.out.println("Scripting directory = " + System.getProperty("user.dir"));
         String arg = "L";
+        try {
+            LinuxUserStatus lu = new LinuxUserStatus(args[0]);
+            lu.getUserstatus();
+        } catch (ArrayIndexOutOfBoundsException exception) {
+            System.out.println("Util syntax is not correct. \nUse one of the possible key. Available keys: locked password (L), has no password (NP), has a usable password (P), has a usable password older 90 days (P90)");
 
-        LinuxUserStatus lu = new LinuxUserStatus(args[0]);
-        lu.getUserstatus();
-
+        }
     }
 
 }
