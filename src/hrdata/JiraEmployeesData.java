@@ -48,8 +48,8 @@ public class JiraEmployeesData {
     private static String botname;
     private static String searchString = "project=HREM";
     private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID";
-    private static String excludedSummaryFieldValue= "test";
-    
+    private static String excludedSummaryFieldValue = "test";
+
     /**
      *
      * @param jiraURL the value of jira URL like https://atlassian.net
@@ -76,15 +76,21 @@ public class JiraEmployeesData {
 
         for (int k = 0; k < allEmp.size(); k++) {
             Issue issue = (Issue) allEmp.get(k);
-            if(!this.checkInList(issue.getKey(), excludedHREMID, delimiter)){
-            valuesMap.put(issue.getKey(), this.getOneEmployeeRecord(issue, fieldList));
+            if (!this.checkInList(issue.getKey(), excludedHREMID, delimiter)) {
+                valuesMap.put(issue.getKey(), this.getOneEmployeeRecord(issue, fieldList));
             }
         }
 
         this.exportDataToCSV(file);
-
+        System.out.println("Total processed records: " + allEmp.size());
         // display time and date using toString()
+
         System.out.println("Finished at: " + new Date().toString());
+
+    }
+
+    public void close() throws JiraException {
+        creds.logout(ctx.getRestClient());
     }
 
     public ArrayList getAllEmployees() throws JiraException {
@@ -93,16 +99,17 @@ public class JiraEmployeesData {
 
 //            /* Search for issues */
         Issue.SearchResult sr = ctx.searchIssues(searchString);
-        System.out.println("Total: " + sr.total);
+        System.out.println("Total records: " + sr.total);
         Iterator<Issue> it = sr.iterator();
         while (it.hasNext()) {
             Issue issueSR = it.next();
-            if(!issueSR.getSummary().split(" ")[0].equalsIgnoreCase(excludedSummaryFieldValue) || issueSR.getSummary().split(" ").length > 1){
-            all.add(issueSR);
-            System.out.println("issueSR: " + issueSR.getKey() + " : "
-                    + issueSR.getSummary());
+            if (!issueSR.getSummary().split(" ")[0].equalsIgnoreCase(excludedSummaryFieldValue) || issueSR.getSummary().split(" ").length > 1) {
+                all.add(issueSR);
+//            System.out.println("issueSR: " + issueSR.getKey() + " : "
+//                    + issueSR.getSummary());
             }
         }
+
         return all;
 
     }
@@ -382,39 +389,52 @@ public class JiraEmployeesData {
     }
 
     public static void main(String[] args) throws JiraException, FileNotFoundException, IOException, RestException, URISyntaxException, ParseException {
-        System.out.println("Working Directory = " + System.getProperty("user.dir"));
+        System.out.println("----------------------------------------------------------------");
+        String inputParameter = null;
+        try {
+            inputParameter = args[0];
+            if (!inputParameter.equalsIgnoreCase("-v")) {
+                System.out.println("Hint: use -v to see startup parameters");
+            }
+        } catch (ArrayIndexOutOfBoundsException exception) {
+            // Without output of file
+        }
 
         Properties prop = new Properties();
         InputStream input = null;
-
         input = new FileInputStream("jira.properties");
 
         // load a properties file
         prop.load(input);
-
-        // get the property value and print it out
-        System.out.println("############################# jsonparser.properties #################################");
-        System.out.println("jiraURL: " + prop.getProperty("jiraURL"));
+        //get the properties value
         String jiraURL = prop.getProperty("jiraURL");
-        System.out.println("userName: " + prop.getProperty("userName"));
         botname = prop.getProperty("userName");
-        System.out.println("jiraSecret: " + "secret");
         String secret = prop.getProperty("jiraSecret");
-        System.out.println("fileName: " + prop.getProperty("fileName"));
         String fileName = prop.getProperty("fileName");
-        System.out.println("fieldList: " + prop.getProperty("fieldList"));
-        if (prop.getProperty("fieldList")!=null && !prop.getProperty("fieldList").isEmpty()) {
+        if (prop.getProperty("fieldList") != null && !prop.getProperty("fieldList").isEmpty()) {
             fieldList = prop.getProperty("fieldList");
         }
-        System.out.println("primaryHREMID: " + prop.getProperty("primaryHREMID"));
         primaryHREMID = prop.getProperty("primaryHREMID");
-        System.out.println("excludedHREMID: " + prop.getProperty("excludedHREMID"));
         excludedHREMID = prop.getProperty("excludedHREMID");
-        System.out.println("######################################################################################");
+
+        if (inputParameter != null && inputParameter.equalsIgnoreCase("-v")) {
+            //Print properties value
+            System.out.println("Working Directory = " + System.getProperty("user.dir"));
+            System.out.println("############################# jsonparser.properties #################################");
+            System.out.println("jiraURL: " + prop.getProperty("jiraURL"));
+            System.out.println("userName: " + prop.getProperty("userName"));
+            System.out.println("jiraSecret: " + "secret");
+            System.out.println("fileName: " + prop.getProperty("fileName"));
+            System.out.println("fieldList: " + prop.getProperty("fieldList"));
+            System.out.println("primaryHREMID: " + prop.getProperty("primaryHREMID"));
+            System.out.println("excludedHREMID: " + prop.getProperty("excludedHREMID"));
+            System.out.println("######################################################################################");
+            System.out.println("OutputFile: " + fileName);
+        }
 
         JiraEmployeesData jira = new JiraEmployeesData(jiraURL, secret, fileName);
         jira.run();
-        System.out.println(fileName);
+        jira.close();
 
     }
 

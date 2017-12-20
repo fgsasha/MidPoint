@@ -42,25 +42,26 @@ public class HTMLutils {
                 return true;
             }
         };
-        System.out.println("URL: " + texturl);
+        //System.out.println("URL: " + texturl);
 
         URL url = new URL(texturl);
         InputStream is = null;
         String jsonText = null;
+        HttpsURLConnection urlConnectionHttp = null;
+        HttpURLConnection urlConnectionHttps = null;
         try {
 
             if (texturl.startsWith("https")) {
-                HttpsURLConnection urlConnection;
-                urlConnection = (HttpsURLConnection) url.openConnection();
-                urlConnection.setHostnameVerifier(hostnameVerifier);
-                urlConnection.setRequestProperty("Content-Type", "application/json");
-                is = urlConnection.getInputStream();
+
+                urlConnectionHttp = (HttpsURLConnection) url.openConnection();
+                urlConnectionHttp.setHostnameVerifier(hostnameVerifier);
+                urlConnectionHttp.setRequestProperty("Content-Type", "application/json");
+                is = urlConnectionHttp.getInputStream();
                 //urlConnection.disconnect();
             } else {
-                HttpURLConnection urlConnection;
-                urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestProperty("Content-Type", "application/json");
-                is = urlConnection.getInputStream();
+                urlConnectionHttps = (HttpURLConnection) url.openConnection();
+                urlConnectionHttps.setRequestProperty("Content-Type", "application/json");
+                is = urlConnectionHttps.getInputStream();
                 //urlConnection.disconnect();
             }
             BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
@@ -69,26 +70,28 @@ public class HTMLutils {
 
             return jsonText;
         } finally {
+            if (urlConnectionHttp != null) {
+                urlConnectionHttp.disconnect();
+            }
+            if (urlConnectionHttps != null) {
+                urlConnectionHttps.disconnect();
+            }
             if (is != null) {
                 is.close();
-                
+
             }
         }
     }
 
-    void connectToJIRA(String connectigURL) throws MalformedURLException, ProtocolException, IOException
-    {
+    void connectToJIRA(String connectigURL) throws MalformedURLException, ProtocolException, IOException {
     }
-    
+
     public static void main(String[] args) throws IOException {
 
 //    System.setProperty("javax.net.ssl.storetype", "pks12");
 //    System.setProperty("javax.net.ssl.keyStore", "/home/onekriach/Documents/IAM/EMC/shorttermOleksandr.Nekriach.001.p12");
 //    System.setProperty("javax.net.ssl.keyStorePassword", "TODO");
 //    System.setProperty("javax.net.debug", "ssl");
-        
-        
-        
         HTMLutils htmlOutput = new HTMLutils();
         htmlOutput.connectToJIRA("");
 
