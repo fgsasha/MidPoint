@@ -48,7 +48,8 @@ public class JiraEmployeesData {
     private static String botname;
     private static String searchString = "project=HREM";
     private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID";
-
+    private static String excludedSummaryFieldValue= "test";
+    
     /**
      *
      * @param jiraURL the value of jira URL like https://atlassian.net
@@ -96,9 +97,11 @@ public class JiraEmployeesData {
         Iterator<Issue> it = sr.iterator();
         while (it.hasNext()) {
             Issue issueSR = it.next();
+            if(!issueSR.getSummary().split(" ")[0].equalsIgnoreCase(excludedSummaryFieldValue) || issueSR.getSummary().split(" ").length > 1){
             all.add(issueSR);
             System.out.println("issueSR: " + issueSR.getKey() + " : "
                     + issueSR.getSummary());
+            }
         }
         return all;
 
