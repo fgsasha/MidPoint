@@ -468,8 +468,13 @@ public class JSONparser {
 
                 for (int p = 0; p < keys.length; p++) {
                     pid = arrayJson.get("PID").toString();
-                    csvStringValues = csvStringValues + arrayJson.get(keys[p].trim()).toString().replace(",", "");   //Добавил подмену "," в найденных данных
-
+                    String insertValue=arrayJson.get(keys[p].trim()).toString().replace(",", ""); //Добавил подмену "," в найденных данных
+                    if(keys[p].toString().equalsIgnoreCase("fullname")){
+                    insertValue=insertValue.replace(replaceSymbol, ""); //Добавил подмену "~" в fullname
+                    }
+                    csvStringValues = csvStringValues + insertValue;   
+                    
+                    
                     if (p < keys.length - 1) {
                         csvStringValues = csvStringValues + this.delimiter;
                     }
@@ -712,7 +717,8 @@ public class JSONparser {
                             csvStringValues = csvStringValues + this.delimiter;
                         } else //TODO
                         //Добавляем в конец, доролнительные данные
-                         if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")) {
+                        {
+                            if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")) {
                                 String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
                                 String mainEmail = getMainEmail(inputData);
                                 csvStringValues = csvStringValues + this.delimiter + mainEmail;
@@ -720,6 +726,7 @@ public class JSONparser {
                                 csvStringValues = csvStringValues + this.delimiter + "";
 
                             }
+                        }
                     }
 
                 }
@@ -828,6 +835,7 @@ public class JSONparser {
     }
 
     private String getMainEmail(String toAdd) {
+        //System.out.println("getMainEmail"+toAdd);
         String mainEmailStr = "";
         if (toAdd.length() > 2) {
             toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
@@ -841,8 +849,7 @@ public class JSONparser {
             while (keySetIter.hasNext()) {
 
                 keySetIternextValue = keySetIter.next();
-
-                if (obj.get(keySetIternextValue.toString()) != null && !obj.get(keySetIternextValue.toString()).toString().isEmpty() && !obj.get(keySetIternextValue.toString()).toString().equalsIgnoreCase("null")) {
+                if (obj.optString(keySetIternextValue) != null && !obj.optString(keySetIternextValue).equalsIgnoreCase("null")) {
 
                     keys[k] = obj.get(keySetIternextValue.toString()).toString();
                     if (mainEmail.containsKey(obj.get(keySetIternextValue.toString()))) {
@@ -855,6 +862,7 @@ public class JSONparser {
 
                     }
                 }
+
                 k = k + 1;
             }
 
@@ -877,15 +885,16 @@ public class JSONparser {
 
             }
         }
-        //System.out.println(mainEmailStr);
+        //System.out.println("Result: "+mainEmailStr);
         return mainEmailStr.toLowerCase();
     }
 
     private String getEmailsJSONfromCompanies(String input) {
 //        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        //System.out.println("input"+input);
         String returnString = "";
         if (input.length() > 2) {
-            JSONObject objOutput = new JSONObject(input);
+            JSONObject objOutput = new JSONObject();
             JSONObject obj = new JSONObject(input);
             String keySetIternextValue = "";
             Iterator<String> keySetIter = obj.keys();
@@ -893,8 +902,10 @@ public class JSONparser {
             int k = 0;
             while (keySetIter.hasNext()) {
                 keySetIternextValue = keySetIter.next();
-                objOutput.put(keySetIternextValue, obj.getJSONObject(keySetIternextValue).opt("email"));
-
+                if (obj.optJSONObject(keySetIternextValue) != null && !obj.getJSONObject(keySetIternextValue).optString("email").equalsIgnoreCase("null") && !obj.getJSONObject(keySetIternextValue).optString("email").isEmpty()) {
+                    //          System.out.println("optString: "+obj.getJSONObject(keySetIternextValue).optString("email"));
+                    objOutput.put(keySetIternextValue, obj.getJSONObject(keySetIternextValue).optString("email").trim());
+                }
             }
             //System.out.println("objOutput=" + objOutput);
             returnString = objOutput.toString();
@@ -928,14 +939,12 @@ public class JSONparser {
                     }
 
                 } else //Если входящая строка состоит не только из цифр, тогда применяем строгую проверку + проверку на содержит ли
-                {
-                    if (checkedValue.equalsIgnoreCase(arrayInputData[i]) || checkedValue.toLowerCase().contains(arrayInputData[i])) {
+                 if (checkedValue.equalsIgnoreCase(arrayInputData[i]) || checkedValue.toLowerCase().contains(arrayInputData[i])) {
                         return true;
                     } else {
                         result = false;
 
                     }
-                }
             }
             // if (!searchString.matches("[^0-9]+$")) ...
         }
