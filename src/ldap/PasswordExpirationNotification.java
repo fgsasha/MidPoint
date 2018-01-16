@@ -5,45 +5,47 @@
  */
 package ldap;
 
+import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
+import javax.naming.directory.SearchResult;
 
 /**
  *
  * @author onekriach
  */
 public class PasswordExpirationNotification {
-    
-    public static void main(String [] args)
-	{
-         PasswordExpirationNotification sup= new PasswordExpirationNotification();
-         sup.run();
-         sup.close();
-        
-        
-        }
+
+    public static void main(String[] args) {
+        PasswordExpirationNotification sup = new PasswordExpirationNotification();
+        sup.run();
+        sup.close();
+
+    }
 
     private void run() {
-    
-   
-    
+
     }
-    void getLdapAccountsToSendNotification(){
+
+    void getLdapAccountsToSendNotification() throws NamingException {
         LdapUtils util = new LdapUtils();
         DirContext ctx = util.connect();
         LdapFilter lf = new LdapFilter();
-        getAllSearchedAccounts();
+        String ldapSearchBase = null;
+        String accountName = null;
+        SearchResult findAccountByAccountName = lf.findAccountByAccountName(ctx, ldapSearchBase, accountName);
+        
     }
-    
-    void sendNotification(){
-    
-    
+
+    void sendNotification() {
+
     }
-    
-    void exportResultInFile(){
-    
+
+    void exportResultInFile() {
+
     }
+
     private void close() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
-    
+
 }
