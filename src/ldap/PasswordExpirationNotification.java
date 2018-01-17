@@ -37,7 +37,7 @@ public class PasswordExpirationNotification {
     }
 
     void sendNotification() {
-
+        //https://www.journaldev.com/2532/javamail-example-send-mail-in-java-smtp
     }
 
     void exportResultInFile() {
