@@ -37,8 +37,8 @@ public class PasswordExpirationNotification {
         LdapUtils util = new LdapUtils();
         DirContext ctx = util.connect();
         LdapFilter lf = new LdapFilter();
-        String ldapSearchBase = "dc=dyninno,dc=test";
-        String accountName = "o.nekriach-adm";
+        String ldapSearchBase = "dc=example,dc=com";
+        String accountName = "administrator";
         SearchResult findAccountByAccountName = lf.findAccountByAccountName(ctx, ldapSearchBase, accountName);
         System.out.println("Result: " + findAccountByAccountName.toString());
         //Attributes attributes = ctx.getAttributes(entryDN, new String[] {"*", "+"});
@@ -72,7 +72,7 @@ public class PasswordExpirationNotification {
             toEmail = recipient;
         }
 
-        mail.sendEmail(mail.initialization(), toEmail, "SimpleEmail Testing Subject", "SimpleEmail Testing Body");
+        mail.sendEmail(mail.Initialization(), toEmail, "SimpleEmail Testing Subject", "SimpleEmail Testing Body");
 
     }
 

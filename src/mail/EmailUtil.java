@@ -73,10 +73,10 @@ public class EmailUtil {
         this.mailDebug = mailDebug;
     }
 
-    public EmailUtil() {
+      EmailUtil() {
     }
 
-    public Session initialization() {
+    public Session Initialization() {
         Properties props = System.getProperties();
         props.put("mail.smtp.host", smtpHostServer);
         props.put("mail.smtp.port", port); //TLS Port
