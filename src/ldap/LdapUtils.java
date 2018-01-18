@@ -19,10 +19,10 @@ public class LdapUtils {
 
     public LdapUtils() {
         environment.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-        environment.put(Context.PROVIDER_URL, "ldap://<hostname>:389");
+        environment.put(Context.PROVIDER_URL, "ldaps://example.com:636");
         environment.put(Context.SECURITY_AUTHENTICATION, "simple");
-        environment.put(Context.SECURITY_PRINCIPAL, "<Login DN>");
-        environment.put(Context.SECURITY_CREDENTIALS, "<password>");
+        environment.put(Context.SECURITY_PRINCIPAL, "uid=administrator,ou=Services,dc=example,dc=com");
+        environment.put(Context.SECURITY_CREDENTIALS, "<secret>");
 
     }
 
@@ -32,7 +32,7 @@ public class LdapUtils {
             context = new InitialDirContext(environment);
             System.out.println("Connected..");
             System.out.println(context.getEnvironment());
-            context.close();
+            
         } catch (AuthenticationNotSupportedException exception) {
             System.out.println("The authentication is not supported by the server");
         } catch (AuthenticationException exception) {
