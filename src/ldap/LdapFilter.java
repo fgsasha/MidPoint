@@ -68,7 +68,6 @@ public class LdapFilter {
     public SearchResult findAccountByAccountName(DirContext ctx, String ldapSearchBase, String accountName) throws NamingException {
 
         //String searchFilter = "(&(objectClass=user)(sAMAccountName=" + accountName + "))";
-        
         String searchFilter = "(&(objectClass=inetOrgPerson)(uid=" + accountName + "))";
 
         SearchControls searchControls = new SearchControls();
@@ -79,7 +78,7 @@ public class LdapFilter {
         SearchResult searchResult = null;
         if (results.hasMoreElements()) {
             searchResult = (SearchResult) results.nextElement();
-            
+
             //make sure there is not another item available, there should be only 1 match
             if (results.hasMoreElements()) {
                 System.err.println("Matched multiple users for the accountName: " + accountName);
@@ -88,6 +87,20 @@ public class LdapFilter {
         }
 
         return searchResult;
+    }
+
+    public SearchResult findAccountsBySearchFiletr(DirContext ctx, String ldapSearchBase, String accountName, String searchFilter) throws NamingException {
+
+        if (searchFilter == null || searchFilter.isEmpty()) {
+            searchFilter = "(objectClass=inetOrgPerson))";
+        }
+
+        SearchControls searchControls = new SearchControls();
+        searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+        NamingEnumeration<SearchResult> results = ctx.search(ldapSearchBase, searchFilter, searchControls);
+
+        return (SearchResult) results;
     }
 
     public String findGroupBySID(DirContext ctx, String ldapSearchBase, String sid) throws NamingException {

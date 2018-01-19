@@ -34,11 +34,11 @@ public class PasswordExpirationNotification {
     }
 
     void getLdapAccountsToSendNotification() throws NamingException, MessagingException, UnsupportedEncodingException, IOException {
-        LdapUtils util = new LdapUtils();
+        LdapUtils util = new LdapUtils("ldap.properties");
         DirContext ctx = util.connect();
         LdapFilter lf = new LdapFilter();
-        String ldapSearchBase = "dc=example,dc=com";
-        String accountName = "administrator";
+        String ldapSearchBase = util.getLdapSearchBase();
+        String accountName = "idm-wr";
         SearchResult findAccountByAccountName = lf.findAccountByAccountName(ctx, ldapSearchBase, accountName);
         System.out.println("Result: " + findAccountByAccountName.toString());
         //Attributes attributes = ctx.getAttributes(entryDN, new String[] {"*", "+"});

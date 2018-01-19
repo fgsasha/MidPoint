@@ -56,6 +56,14 @@ public class JSONparser {
     private String[] outputArray;
     private String personId = "99999999999";
 
+    /**
+     *
+     * @param direction
+     * @param emcJsonFile
+     * @param hrmJsonFile
+     * @param filterFieldName
+     * @param filterValues
+     */
     public JSONparser(String direction, String emcJsonFile, String hrmJsonFile, String filterFieldName, String filterValues) {
         //Офлайн Конструктор для чтения из фалов
         DateFormat dateFormat = new SimpleDateFormat("_yyyy-MM-dd-HH-mm-ss");
@@ -75,6 +83,17 @@ public class JSONparser {
         this.setFilterValues(filterValues);
     }
 
+    /**
+     *
+     * @param direction
+     * @param emcJsonFile
+     * @param hrmURL
+     * @param hrmOUTCSVFile
+     * @param filterFieldName
+     * @param filterValues
+     * @throws DataFormatException
+     * @throws IOException
+     */
     public JSONparser(String direction, String emcJsonFile, String hrmURL, String hrmOUTCSVFile, String filterFieldName, String filterValues) throws DataFormatException, IOException {
         //Онлайн конструктор для чтения HRM-JSON  из URL и чтение EMC-JSON из фалов
         DateFormat dateFormat = new SimpleDateFormat("_yyyy-MM-dd-HH-mm-ss");
@@ -123,6 +142,10 @@ public class JSONparser {
 
     }
 
+    /**
+     *
+     * @throws IOException
+     */
     public void run() throws IOException {
         // display time and date using toString()
         if (this.sourceHRData.equalsIgnoreCase("HRM")) {
@@ -335,54 +358,106 @@ public class JSONparser {
         System.out.println("Finished at: " + new Date().toString());
     }
 
+    /**
+     *
+     * @param emcJsonFile
+     */
     public void setEmcJsonFile(String emcJsonFile) {
         this.emcJsonFile = emcJsonFile;
     }
 
+    /**
+     *
+     * @return
+     */
     public String getEmcJsonFile() {
         return this.emcJsonFile;
     }
 
+    /**
+     *
+     * @param emcCSVFile
+     */
     public void setEmcCSVFile(String emcCSVFile) {
         this.emcCSVFile = emcCSVFile;
     }
 
+    /**
+     *
+     * @param hrmJsonFile
+     */
     public void setHrmJsonFile(String hrmJsonFile) {
         this.hrmJsonFile = hrmJsonFile;
     }
 
+    /**
+     *
+     * @return
+     */
     public String getHrmJsonFile() {
         return this.hrmJsonFile;
     }
 
+    /**
+     *
+     * @param hrmCSVFile
+     */
     public void setHrmCSVFile(String hrmCSVFile) {
         this.hrmCSVFile = hrmCSVFile;
     }
 
+    /**
+     *
+     * @param sourceHRData
+     */
     public void setSourceHRData(String sourceHRData) {
         this.sourceHRData = sourceHRData;
     }
 
+    /**
+     *
+     * @return
+     */
     public String getSourceHRData() {
         return sourceHRData;
     }
 
+    /**
+     *
+     * @param filterFieldName
+     */
     public void setFilterFieldName(String filterFieldName) {
         this.filterFieldName = filterFieldName;
     }
 
+    /**
+     *
+     * @param filterValues
+     */
     public void setFilterValues(String filterValues) {
         this.filterValues = filterValues;
     }
 
+    /**
+     *
+     * @param numberOdRows
+     */
     public void setNumberOdRows(Boolean numberOdRows) {
         this.wholeFile = numberOdRows;
     }
 
+    /**
+     *
+     * @param outputCSVFilePath
+     */
     public void setOutputCSVFilePath(String outputCSVFilePath) {
         this.outputCSVFilePath = outputCSVFilePath;
     }
 
+    /**
+     *
+     * @param filePath
+     */
     public void setInputJSONFilePath(String filePath) {
         this.inputJSONFilePath = filePath;
     }
@@ -393,6 +468,10 @@ public class JSONparser {
 
     }
 
+    /**
+     *
+     * @return @throws IOException
+     */
     public String[] HRMJsonToArray() throws IOException {
 
         JSONObject obj = new JSONObject(this.StringFromStream());
@@ -402,7 +481,7 @@ public class JSONparser {
         System.out.println("Total HRM records: " + array.length());
 
         String csvStringValues = "";
-        String[] filterFieldnames = hrmFilterFieldName.split(this.delimiter);
+        String[] filterFieldnames = hrmFilterFieldName.split(this.delimiter, -1);
         Boolean checkResult = Boolean.FALSE;
         Array returnArrayList;
 
@@ -468,13 +547,12 @@ public class JSONparser {
 
                 for (int p = 0; p < keys.length; p++) {
                     pid = arrayJson.get("PID").toString();
-                    String insertValue=arrayJson.get(keys[p].trim()).toString().replace(",", ""); //Добавил подмену "," в найденных данных
-                    if(keys[p].toString().equalsIgnoreCase("fullname")){
-                    insertValue=insertValue.replace(replaceSymbol, ""); //Добавил подмену "~" в fullname
+                    String insertValue = arrayJson.get(keys[p].trim()).toString().replace(",", ""); //Добавил подмену "," в найденных данных
+                    if (keys[p].toString().equalsIgnoreCase("fullname")) {
+                        insertValue = insertValue.replace(replaceSymbol, ""); //Добавил подмену "~" в fullname
                     }
-                    csvStringValues = csvStringValues + insertValue;   
-                    
-                    
+                    csvStringValues = csvStringValues + insertValue;
+
                     if (p < keys.length - 1) {
                         csvStringValues = csvStringValues + this.delimiter;
                     }
@@ -523,6 +601,10 @@ public class JSONparser {
         }
     }
 
+    /**
+     *
+     * @return @throws IOException
+     */
     public String[] EMCJsonToArray() throws IOException {
         System.out.println("В EMC анализируются только активные пользователи у которых есть логины");
 
@@ -563,7 +645,7 @@ public class JSONparser {
 
         }
 
-        String[] filterFieldnames = emcFilterFieldName.split(this.delimiter);
+        String[] filterFieldnames = emcFilterFieldName.split(this.delimiter, -1);
         Boolean checkResult = Boolean.FALSE;
 
         Iterator<String> keySetIter = firstRow.keys();
@@ -589,7 +671,7 @@ public class JSONparser {
         //System.out.println(csvKeysString);
 
         //делаем подмену ключевых полей на те, что уже использовались в idm
-        csvKeysString = csvKeysString.replace("isActive", "isActiveEMC");
+        csvKeysString = csvKeysString.replace("isActive", "isActiveEMC").replace("location", "locationEMC");
 
         if (this.wholeFile) {
             returnArray = new String[ks.length + 1];
@@ -717,8 +799,7 @@ public class JSONparser {
                             csvStringValues = csvStringValues + this.delimiter;
                         } else //TODO
                         //Добавляем в конец, доролнительные данные
-                        {
-                            if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")) {
+                         if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")) {
                                 String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
                                 String mainEmail = getMainEmail(inputData);
                                 csvStringValues = csvStringValues + this.delimiter + mainEmail;
@@ -726,7 +807,6 @@ public class JSONparser {
                                 csvStringValues = csvStringValues + this.delimiter + "";
 
                             }
-                        }
                     }
 
                 }
@@ -928,7 +1008,7 @@ public class JSONparser {
         if (checkedValue == null || checkedValue.isEmpty()) {
             result = false;
         } else {
-            String[] arrayInputData = inputString.toLowerCase().split(delimiter);
+            String[] arrayInputData = inputString.toLowerCase().split(delimiter, -1);
             for (int i = 0; i < arrayInputData.length; i++) {
                 if (!arrayInputData[i].matches("[^0-9]+$")) {
                     //Если входящая строка состоит из цифр, тогда применяем строгое сравнение
@@ -939,12 +1019,14 @@ public class JSONparser {
                     }
 
                 } else //Если входящая строка состоит не только из цифр, тогда применяем строгую проверку + проверку на содержит ли
-                 if (checkedValue.equalsIgnoreCase(arrayInputData[i]) || checkedValue.toLowerCase().contains(arrayInputData[i])) {
+                {
+                    if (checkedValue.equalsIgnoreCase(arrayInputData[i]) || checkedValue.toLowerCase().contains(arrayInputData[i])) {
                         return true;
                     } else {
                         result = false;
 
                     }
+                }
             }
             // if (!searchString.matches("[^0-9]+$")) ...
         }
@@ -969,10 +1051,13 @@ public class JSONparser {
         }
 
         if (k != null) {
+            //number of delimiters in the first row
+            int delimitersInFirstRow = (k[0].split(delimiter, -1).length) - 1;
             for (int i = 0; i < k.length; i++) {
                 //System.out.println("k[" + i + "]=" + k[i]);
                 if (k[i] != null) {
-                    writer.println(this.cleanOfSpecSymbols(k[i]));
+                    String row = this.addMissingDelimeters(k[i], delimiter, delimitersInFirstRow);
+                    writer.println(this.cleanOfSpecSymbols(row));
                     l = l + 1;
                 }
             }
@@ -1075,6 +1160,11 @@ public class JSONparser {
         //   System.setProperty("javax.net.debug", "ssl");
     }
 
+    /**
+     *
+     * @param str
+     * @return
+     */
     public static boolean isDigit(String str) {
         for (char c : str.toCharArray()) {
             if (!Character.isDigit(c)) {
@@ -1084,6 +1174,47 @@ public class JSONparser {
         return true;
     }
 
+    /**
+     * To add missing delimeters for every non empty rows. Some applications
+     * require the right number of delimiter symbols for every row in CSV file.
+     * The number of delimiters should be equals to the number of delimiters in
+     * the first row (fields string)
+     *
+     * @param inputRow String that should be checked on correct numbers of spec
+     * symbols and should be fixed
+     *
+     * @param delimiter Spec symbol that is used as delimiter in CSV file
+     * @param numberOfsymbols The number of delimiters in the first row (fields
+     * string)
+     * @return Right formated CSV string
+     */
+    private String addMissingDelimeters(String inputRow, String delimiter, int numberOfsymbols) {
+        int delimitersToAdd;
+        String outputRow = inputRow;
+        int delimitersInInputRow;
+
+        if (inputRow != null && delimiter != null && numberOfsymbols != 0) {
+            delimitersInInputRow = (inputRow.split(delimiter, -1).length) - 1;
+            delimitersToAdd = numberOfsymbols - delimitersInInputRow;
+            if (delimitersToAdd > 0) {
+                for (int i = 0; i < delimitersToAdd; i++) {
+                    outputRow = outputRow + delimiter;
+                }
+            }
+        }
+        
+        
+        
+        return outputRow;
+    }
+
+    /**
+     *
+     * @param args
+     * @throws DataFormatException
+     * @throws IOException
+     * @throws UnsupportedEncodingException
+     */
     public static void main(String[] args) throws DataFormatException, IOException, UnsupportedEncodingException {
         System.out.println("----------------------------------------------------------------");
         String inputParameter = null;

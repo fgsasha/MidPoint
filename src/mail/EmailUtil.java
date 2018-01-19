@@ -91,8 +91,12 @@ public class EmailUtil {
         System.out.println("----------------------------------------------------------------");
         String inputParameter = null;
         Properties prop = new Properties();
-        FileInputStream input = new FileInputStream(new File("mail.properties"));
-
+        FileInputStream input;
+        if (fileProperties==null || fileProperties.isEmpty()){
+        input = new FileInputStream(new File("mail.properties"));
+        } else {
+        input = new FileInputStream(new File(fileProperties));
+        }
         // load a properties file
         prop.load(new InputStreamReader(input, Charset.forName("UTF-8")));
 
