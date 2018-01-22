@@ -7,9 +7,15 @@ package ldap;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import javax.mail.MessagingException;
 import javax.mail.Session;
+import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
@@ -30,10 +36,27 @@ public class PasswordExpirationNotification {
     }
 
     private void run() throws NamingException, MessagingException, UnsupportedEncodingException, IOException {
-        this.getLdapAccountsToSendNotification();
+        // this.test();
+        NamingEnumeration<SearchResult> sr = getAllLdapAccounts();
+        analyzeSearchResult(sr);
+
     }
 
-    void getLdapAccountsToSendNotification() throws NamingException, MessagingException, UnsupportedEncodingException, IOException {
+    long getPasswordAge(String age) throws ParseException {
+
+        String[] parts = age.split("[.]");
+        String dateTimePart = parts[0];
+        String timeZonePart = "+0" + parts[1].substring(0, parts[1].length() - 1) + "00";
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssZ");
+        Date theDate = sdf.parse(dateTimePart + timeZonePart);
+        Date now = new Date();
+        long diff = now.getTime() - theDate.getTime();
+        long output = TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS);
+
+        return output;
+    }
+
+    void test() throws NamingException, MessagingException, UnsupportedEncodingException, IOException {
         LdapUtils util = new LdapUtils("ldap.properties");
         DirContext ctx = util.connect();
         LdapFilter lf = new LdapFilter();
@@ -83,6 +106,50 @@ public class PasswordExpirationNotification {
     private void close() {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 
+    }
+
+    private NamingEnumeration<SearchResult> getAllLdapAccounts() throws IOException, NamingException {
+        LdapUtils util = new LdapUtils("ldap.properties");
+        DirContext ctx = util.connect();
+        LdapFilter lf = new LdapFilter();
+        String ldapSearchBase = util.getLdapSearchBase();
+        //    String accountName = "idm-wr";
+        NamingEnumeration<SearchResult> findAccountByAccountName = lf.findAccountsBySearchFiletr(ctx, ldapSearchBase, null);
+        return findAccountByAccountName;
+
+    }
+
+    private void analyzeSearchResult(NamingEnumeration<SearchResult> sr) throws NamingException {
+
+        while (sr.hasMore()) {
+            SearchResult account = sr.next();
+            String accountDN = account.getNameInNamespace();
+            String pwdChangedTime = "";
+            String userCreated = "";
+
+            if (checkUserSpecialOU(accountDN)) {
+                //For some special containers gather details and send to technical iam mailbox
+            } else if (account.getAttributes().get("pwdChangedTime").get() != null && !account.getAttributes().get("pwdChangedTime").get().toString().isEmpty()) {
+                //send notification about password change
+
+            } else if (checkForSpecialUser(accountDN)) {
+                //Skip some user from notification about initial password
+
+            } else {
+                //send notification about initial password       
+
+            }
+
+        }
+
+    }
+
+    private boolean checkUserSpecialOU(String accountDN) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private boolean checkForSpecialUser(String accountDN) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
 }

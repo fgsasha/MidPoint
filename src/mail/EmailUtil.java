@@ -73,7 +73,7 @@ public class EmailUtil {
         this.mailDebug = mailDebug;
     }
 
-      EmailUtil() {
+    EmailUtil() {
     }
 
     public Session Initialization() {
@@ -92,10 +92,10 @@ public class EmailUtil {
         String inputParameter = null;
         Properties prop = new Properties();
         FileInputStream input;
-        if (fileProperties==null || fileProperties.isEmpty()){
-        input = new FileInputStream(new File("mail.properties"));
+        if (fileProperties == null || fileProperties.isEmpty()) {
+            input = new FileInputStream(new File("mail.properties"));
         } else {
-        input = new FileInputStream(new File(fileProperties));
+            input = new FileInputStream(new File(fileProperties));
         }
         // load a properties file
         prop.load(new InputStreamReader(input, Charset.forName("UTF-8")));
@@ -116,7 +116,7 @@ public class EmailUtil {
         this.setFromAddress(fromAddress);
         String fromDisplayName = prop.getProperty("fromDisplayName", "no-reply-User");
         this.setFromDisplayName(fromDisplayName);
-        
+
         if (verbose != null && verbose.equalsIgnoreCase("true")) {
             System.out.println("Working Directory = " + System.getProperty("user.dir"));
             System.out.println("#############################jsonparser.properties#################################");
@@ -126,7 +126,7 @@ public class EmailUtil {
             System.out.println("smtpAuth: " + smtpAuth);
             System.out.println("mailDebug: " + mailDebug);
             System.out.println("fromAddress: " + fromAddress);
-            System.out.println("fromDisplayName: " + fromDisplayName);            
+            System.out.println("fromDisplayName: " + fromDisplayName);
             System.out.println("#############################EOF#################################");
         }
 

@@ -799,14 +799,14 @@ public class JSONparser {
                             csvStringValues = csvStringValues + this.delimiter;
                         } else //TODO
                         //Добавляем в конец, доролнительные данные
-                         if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")) {
-                                String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
-                                String mainEmail = getMainEmail(inputData);
-                                csvStringValues = csvStringValues + this.delimiter + mainEmail;
-                                //Добавляем пустое значение для locationId
-                                csvStringValues = csvStringValues + this.delimiter + "";
+                        if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")) {
+                            String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
+                            String mainEmail = getMainEmail(inputData);
+                            csvStringValues = csvStringValues + this.delimiter + mainEmail;
+                            //Добавляем пустое значение для locationId
+                            csvStringValues = csvStringValues + this.delimiter + "";
 
-                            }
+                        }
                     }
 
                 }
@@ -1202,9 +1202,7 @@ public class JSONparser {
                 }
             }
         }
-        
-        
-        
+
         return outputRow;
     }
 

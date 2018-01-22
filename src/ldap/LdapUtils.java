@@ -62,10 +62,10 @@ public class LdapUtils {
         String inputParameter = null;
         Properties prop = new Properties();
         FileInputStream input;
-        if (fileProperties==null || fileProperties.isEmpty()){
-        input = new FileInputStream(new File("ldap.properties"));
+        if (fileProperties == null || fileProperties.isEmpty()) {
+            input = new FileInputStream(new File("ldap.properties"));
         } else {
-        input = new FileInputStream(new File(fileProperties));
+            input = new FileInputStream(new File(fileProperties));
         }
         // load a properties file
         prop.load(new InputStreamReader(input, Charset.forName("UTF-8")));

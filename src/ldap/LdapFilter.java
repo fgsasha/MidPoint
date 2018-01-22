@@ -9,6 +9,7 @@ import java.util.Hashtable;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
@@ -89,18 +90,28 @@ public class LdapFilter {
         return searchResult;
     }
 
-    public SearchResult findAccountsBySearchFiletr(DirContext ctx, String ldapSearchBase, String accountName, String searchFilter) throws NamingException {
+    /**
+     * Find ldap users by search filter and return all attributes includes
+     * operational attributes
+     *
+     * @param ctx Context
+     * @param ldapSearchBase ldap search base
+     * @param searchFilter Standart ldap filter if searchFilter is empty oir
+     * null (objectClass=inetOrgPerson)
+     * @return SearchResult
+     * @throws NamingException
+     */
+    public NamingEnumeration<SearchResult> findAccountsBySearchFiletr(DirContext ctx, String ldapSearchBase, String searchFilter) throws NamingException {
 
         if (searchFilter == null || searchFilter.isEmpty()) {
-            searchFilter = "(objectClass=inetOrgPerson))";
+            searchFilter = "(objectClass=inetOrgPerson)";
         }
 
         SearchControls searchControls = new SearchControls();
         searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
-        NamingEnumeration<SearchResult> results = ctx.search(ldapSearchBase, searchFilter, searchControls);
-
-        return (SearchResult) results;
+        NamingEnumeration<SearchResult> results = ctx.search(ldapSearchBase, searchFilter, new String[]{"*", "+"}, searchControls);
+        return results;
     }
 
     public String findGroupBySID(DirContext ctx, String ldapSearchBase, String sid) throws NamingException {
