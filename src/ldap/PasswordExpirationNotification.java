@@ -124,20 +124,27 @@ public class PasswordExpirationNotification {
         while (sr.hasMore()) {
             SearchResult account = sr.next();
             String accountDN = account.getNameInNamespace();
-            String pwdChangedTime = "";
-            String userCreated = "";
+            String pwdChangedTime = (String)account.getAttributes().get("pwdChangedTime").get();
+            String userCreated = (String)account.getAttributes().get("createTimestamp").get();
+            String mail=(String)account.getAttributes().get("mail").get();
+            String uid=(String)account.getAttributes().get("uid").get();
+            String displayName=(String)account.getAttributes().get("displayName").get();
 
             if (checkUserSpecialOU(accountDN)) {
                 //For some special containers gather details and send to technical iam mailbox
-            } else if (account.getAttributes().get("pwdChangedTime").get() != null && !account.getAttributes().get("pwdChangedTime").get().toString().isEmpty()) {
+            } else if (pwdChangedTime != null && !pwdChangedTime.isEmpty()) {
                 //send notification about password change
-
+                if(shouldSendMail(pwdChangedTime)){
+                sendEmailNotification(mail, displayName, uid, pwdChangedTime);
+                }
             } else if (checkForSpecialUser(accountDN)) {
                 //Skip some user from notification about initial password
-
+                //TODO some special event or notification
             } else {
                 //send notification about initial password       
-
+                if(shouldSendInitialMail(pwdChangedTime)){
+                sendInitialEmailNotification(mail, displayName, uid, userCreated);
+                }
             }
 
         }
@@ -149,6 +156,22 @@ public class PasswordExpirationNotification {
     }
 
     private boolean checkForSpecialUser(String accountDN) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private boolean shouldSendMail(String pwdChangedTime) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private void sendEmailNotification(String mail, String displayName, String uid, String pwdChangedTime) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private boolean shouldSendInitialMail(String pwdChangedTime) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private void sendInitialEmailNotification(String mail, String displayName, String uid, String userCreated) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
