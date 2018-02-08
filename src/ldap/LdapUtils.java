@@ -27,6 +27,7 @@ public class LdapUtils {
     private String bindUser = "uid=administrator,ou=Services,dc=example,dc=com";
     private String cred = "<secret>";
     private String ldapSearchBase = "dc=example,dc=com";
+    private String ldapSearchFilter = "(&(objectClass=inetOrgPerson)(uid=*))";
 
     public String getLdapSearchBase() {
         return ldapSearchBase;
@@ -52,6 +53,10 @@ public class LdapUtils {
 
     public void setEnvironment(Hashtable<String, String> environment) {
         this.environment = environment;
+    }
+
+    private void setLdapSearchFilter(String ldapSearchFilter) {
+        this.ldapSearchFilter = ldapSearchFilter;
     }
 
     LdapUtils() {
@@ -80,6 +85,8 @@ public class LdapUtils {
         this.setCred(cred);
         String ldapSearchBase = prop.getProperty("ldapSearchBase", "dc=example,dc=com");
         this.setLdapSearchBase(ldapSearchBase);
+        String ldapSearchFilter = prop.getProperty("ldapSearchFilter", "(&(objectClass=inetOrgPerson)(uid=*))");
+        this.setLdapSearchFilter(ldapSearchFilter);
 
         if (verbose != null && verbose.equalsIgnoreCase("true")) {
             System.out.println("Working Directory = " + System.getProperty("user.dir"));
@@ -89,6 +96,7 @@ public class LdapUtils {
             System.out.println("bindUser: " + bindUser);
             System.out.println("cred: " + "<secret>");
             System.out.println("ldapSearchBase: " + ldapSearchBase);
+            System.out.println("ldapSearchFilter: " + ldapSearchFilter);
             System.out.println("#############################EOF#################################");
         }
 
@@ -127,4 +135,9 @@ public class LdapUtils {
             context.close();
         }
     }
+
+    String getLdapSearchFilter() {
+        return ldapSearchFilter;
+    }
+
 }

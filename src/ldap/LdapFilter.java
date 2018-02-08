@@ -107,10 +107,13 @@ public class LdapFilter {
             searchFilter = "(objectClass=inetOrgPerson)";
         }
 
-        SearchControls searchControls = new SearchControls();
-        searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-
-        NamingEnumeration<SearchResult> results = ctx.search(ldapSearchBase, searchFilter, new String[]{"*", "+"}, searchControls);
+        SearchControls controls = new SearchControls();
+        String[] filterArgs = new String[]{"*", "+"};
+        controls.setReturningAttributes(filterArgs);
+        controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        //String[] filterArgs = new String[]{"pwdChangedTime","createTimestamp","mail","uid","displayName"};
+        //NamingEnumeration<SearchResult> results = ctx.search(ldapSearchBase, searchFilter, filterArgs, controls);
+        NamingEnumeration<SearchResult> results = ctx.search(ldapSearchBase, searchFilter, controls);
         return results;
     }
 
