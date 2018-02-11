@@ -56,6 +56,7 @@ public class PasswordExpirationNotification {
     private static String ldapPropFile = "ldap.properties";
 
     //////////////////////
+    private String passwordExpiration="365";
     private String initialsNotificationInterval = "2,4,8,16,32,64";
     private String notificationInterval="364,363,361,357,349,333,301,180,90"; //Countdown 
     private String specialUsers="dummy,administrator,dbrepluser";
@@ -68,6 +69,7 @@ public class PasswordExpirationNotification {
         sup.close();
 
     }
+
 
 
     private void run() throws NamingException, MessagingException, UnsupportedEncodingException, IOException, ParseException {
@@ -199,7 +201,7 @@ public class PasswordExpirationNotification {
             } else if (pwdChangedTime != null && !pwdChangedTime.isEmpty() && !pwdChangedTime.equalsIgnoreCase(createTimestamp)) {
                 //send notification about password change
                 System.out.println("Check pwdChangedTime");
-                if (shouldSendMail(pwdChangedTime)) {
+                if (shouldSendMailWithCountdown(pwdChangedTime)) {
                     if (mail == null) {
                         initEmail();
                     }
@@ -260,6 +262,21 @@ public class PasswordExpirationNotification {
         return result;
     }
 
+        private boolean shouldSendMailWithCountdown(String pwdChangedTime) throws ParseException {
+        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        Boolean result = false;
+        // yyyyMMddHHmmssX or yyyyMMddHHmmss'Z'
+        DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssX");
+        Date pwdTime = dateFormat.parse(pwdChangedTime);
+        Date currentDate = new Date();
+        int diffInDays = (int) ((currentDate.getTime() - pwdTime.getTime()) / (1000 * 60 * 60 * 24));
+        ArrayList notification = getNotificationInterval();
+        String passwordExpiration=getpasswordExpiration();
+        result = checkpasswordExpirationInterval(notification,passwordExpiration ,String.valueOf(diffInDays));
+        return result;
+    }
+
+    
     private boolean shouldSendInitialMail(String createTimestamp) throws ParseException {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         Boolean result = false;
@@ -350,6 +367,12 @@ public class PasswordExpirationNotification {
         // System.out.println("SimpleEmail Start");
         String toEmail = null;
         // System.out.println("recipient: " + recipient);
+        String debug = getDebugEmails();
+        if (debug == null || debug.equalsIgnoreCase("true")) {
+            System.out.println("Debug notification");
+            writeEmailTofile(debugFilename, recipient, uid, displayName, createTimestamp);
+
+        } else {
         if (recipient == null || recipient.isEmpty()) {
             if (adminEmail == null) {
                 getAdminEmail();
@@ -363,7 +386,7 @@ public class PasswordExpirationNotification {
         }
         
         mail.sendEmail(mail.Initialization(), toEmail, getInitialEmailNotificationSubject(uid), getInitialEmailNotificationBody(displayName, uid, createTimestamp));
-
+        }
     }
 
     private void sendAnalitic(String adminEmail) throws IOException {
@@ -505,5 +528,27 @@ public class PasswordExpirationNotification {
         // load a properties file
         prop.load(new InputStreamReader(input, Charset.forName("UTF-8")));
         return prop.getProperty(property);
+    }
+
+    private String getpasswordExpiration() {
+    return this.passwordExpiration;
+    }
+
+    private Boolean checkpasswordExpirationInterval(ArrayList expirationNotificationInterval, String passwordExpirationPolicy, String passwordAge) {
+            if (expirationNotificationInterval == null || expirationNotificationInterval.isEmpty() || passwordExpirationPolicy==null) {
+            return false;
+        }
+        int policy=Integer.parseInt(passwordExpirationPolicy);
+        Boolean result = false;
+        for (int i = 0; i < expirationNotificationInterval.size(); i++) {
+            int diff=policy-Integer.parseInt(passwordAge);
+            if (Integer.parseInt(expirationNotificationInterval.get(i).toString())==diff) {
+                result = true;
+                break;
+            }
+        }
+        return result;
+    
+    
     }
 }
