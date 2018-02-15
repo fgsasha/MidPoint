@@ -44,6 +44,7 @@ public class EmailUtil {
     private String mailDebug = "false";
     private String fromAddress = "noreply@example.com";
     private String fromDisplayName = "no-reply-User";
+    private String pathToAttach = "";
 
     public void setFromAddress(String fromAddress) {
         this.fromAddress = fromAddress;
@@ -71,6 +72,14 @@ public class EmailUtil {
 
     public void setMailDebug(String mailDebug) {
         this.mailDebug = mailDebug;
+    }
+
+    public void setPathToAttach(String pathToAttach) {
+        this.pathToAttach = pathToAttach;
+    }
+
+    public String getPathToAttach() {
+        return this.pathToAttach;
     }
 
     EmailUtil() {
@@ -116,6 +125,8 @@ public class EmailUtil {
         this.setFromAddress(fromAddress);
         String fromDisplayName = prop.getProperty("fromDisplayName", "no-reply-User");
         this.setFromDisplayName(fromDisplayName);
+        String pathToAttach = prop.getProperty("pathToAttach", "");
+        this.setPathToAttach(pathToAttach);
 
         if (verbose != null && verbose.equalsIgnoreCase("true")) {
             System.out.println("Working Directory = " + System.getProperty("user.dir"));
@@ -127,6 +138,7 @@ public class EmailUtil {
             System.out.println("mailDebug: " + mailDebug);
             System.out.println("fromAddress: " + fromAddress);
             System.out.println("fromDisplayName: " + fromDisplayName);
+            System.out.println("pathToAttach: " + pathToAttach);
             System.out.println("#############################EOF#################################");
         }
 
@@ -147,6 +159,46 @@ public class EmailUtil {
         msg.addHeader("Content-type", "text/HTML; charset=UTF-8");
         msg.addHeader("format", "flowed");
         msg.addHeader("Content-Transfer-Encoding", "8bit");
+        msg.setFrom(new InternetAddress(fromAddress, fromDisplayName));
+        msg.setReplyTo(InternetAddress.parse(fromAddress, false));
+        msg.setSubject(subject, "UTF-8");
+        msg.setText(body, "UTF-8");
+        msg.setSentDate(new Date());
+
+        msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail, false));
+//        System.out.println("Message is ready");
+//        Transport.send(msg);
+        System.out.println("Message is ready");
+        // creates message part
+        MimeBodyPart messageBodyPart = new MimeBodyPart();
+        messageBodyPart.setContent(body, "text/html");
+
+        // creates multi-part
+        Multipart multipart = new MimeMultipart();
+        multipart.addBodyPart(messageBodyPart);
+        // sets the multi-part as e-mail's content
+        msg.setContent(multipart);
+        // sends the e-mail
+        Transport.send(msg);
+        System.out.println("EMail Sent Successfully!!");
+
+    }
+
+    /**
+     * Utility method to send HTML email with attachment
+     *
+     * @param session
+     * @param toEmail
+     * @param subject
+     * @param body
+     */
+    public void sendEmailWithAttachment(Session session, String toEmail, String subject, String body, String[] attachFiles) throws MessagingException, UnsupportedEncodingException {
+
+        MimeMessage msg = new MimeMessage(session);
+        //set message headers
+        msg.addHeader("Content-type", "text/HTML; charset=UTF-8");
+        msg.addHeader("format", "flowed");
+        msg.addHeader("Content-Transfer-Encoding", "8bit");
 //
         msg.setFrom(new InternetAddress(fromAddress, fromDisplayName));
 
@@ -160,6 +212,33 @@ public class EmailUtil {
 
         msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail, false));
         System.out.println("Message is ready");
+        // creates message part
+        MimeBodyPart messageBodyPart = new MimeBodyPart();
+        messageBodyPart.setContent(body, "text/html");
+
+        // creates multi-part
+        Multipart multipart = new MimeMultipart();
+        multipart.addBodyPart(messageBodyPart);
+
+        // adds attachments
+        if (attachFiles != null && attachFiles.length > 0) {
+            for (String filePath : attachFiles) {
+                MimeBodyPart attachPart = new MimeBodyPart();
+
+                try {
+                    attachPart.attachFile(filePath);
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+
+                multipart.addBodyPart(attachPart);
+            }
+        }
+
+        // sets the multi-part as e-mail's content
+        msg.setContent(multipart);
+
+        // sends the e-mail
         Transport.send(msg);
 
         System.out.println("EMail Sent Successfully!!");
