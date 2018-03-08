@@ -54,13 +54,13 @@ public class PasswordExpirationNotification {
     private static String initEmailNotifiTemplFile = "initialEmailForWP.template";
     private static String mailPropFile = "mail.properties";
     // private static String ldapPropFile = "ldap.properties";
-    private static String ldapPropFile = "ldap.properties.test";
+    private static String ldapPropFile = "ldap.properties.prod";
 
     //////////////////////
     private String passwordExpiration = "365";
     private String initialsNotificationInterval = "0,1,2,4,8,16,32,64";
     private String notificationInterval = "1,2,4,8,16,32,64,90,180"; //Countdown 
-    private String specialUsers = "dummy,administrator,dbrepluser";
+    private String specialUsers = "";
     private String specialOU = "ou=Services,ou=Administrators";
     private String debugEmailsToFile = "false";
 
@@ -110,10 +110,11 @@ public class PasswordExpirationNotification {
     }
 
     private void analyzeSearchResult(NamingEnumeration<SearchResult> sr) throws NamingException, ParseException, IOException, MessagingException {
-
+        int i=0;
         while (sr.hasMore()) {
+            
             SearchResult account = sr.next();
-            System.out.println(account);
+            //System.out.println(account);
             String accountDN = account.getNameInNamespace();
 
             Attributes attributes = (Attributes) account.getAttributes();
@@ -167,15 +168,17 @@ public class PasswordExpirationNotification {
                     if (mail == null) {
                         initEmail();
                     }
-                    System.out.println("Send initial mail: " + accountDN + " : " + createTimestamp);
+                    System.out.println("Send initial mail: " + uid + " : " + createTimestamp);
                     sendInitialEmailNotification(mail, displayName, uid, createTimestamp);
                     putAnalitic(INITIALPASS, accountDN);
+                    i=i+1;
                 }
             }
         }
 
         System.out.println("Send analitic");
         sendAnalitic(adminEmail);
+        System.out.println("Number of initial mails="+i);
         this.close();
     }
 
@@ -251,7 +254,7 @@ public class PasswordExpirationNotification {
 
     private void putAnalitic(String analiticCase, String account) {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        System.out.println("Module putAnalitic is not ready yet");
+        //System.out.println("Module putAnalitic is not ready yet");
     }
 
     private ArrayList getInitialsNotificationInterval() {
@@ -334,7 +337,7 @@ public class PasswordExpirationNotification {
                 // attachments
                 String[] attachFiles = new String[1];
                 attachFiles[0] = getPathToAttach();
-                System.out.println(getPathToAttach());
+                //System.out.println(getPathToAttach());
                 mail.sendEmailWithAttachment(mail.Initialization(), toEmail, getInitialEmailNotificationSubject(uid), getInitialEmailNotificationBody(displayName, uid, createTimestamp), attachFiles);
             } else {
                 mail.sendEmail(mail.Initialization(), toEmail, getInitialEmailNotificationSubject(uid), getInitialEmailNotificationBody(displayName, uid, createTimestamp));

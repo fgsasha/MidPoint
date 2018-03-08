@@ -106,12 +106,14 @@ public class ConvertUtils {
     }
 
     public static void main(String[] args) {
-        //example PID 
-        String pid = "2369";
         ConvertUtils c = new ConvertUtils();
-        String employeeId = c.getHrIdNumberRev(personId, pid); //For HRM personId always is 99999999999
-        System.out.println("Result should be equal: 002Y4MBN3X1B = " + employeeId);
-        System.out.println("Result is correct: " + employeeId.equals("002Y4MBN3X1B"));
+        //example PID 
+        String pid = "999999";        
+        //String employeeId = c.getHrIdNumberRev(personId, pid); //For HRM personId always is 99999999999
+        String employeeId = c.getHrIdNumberRev("99900000004", pid);
+        System.out.println(employeeId);
+        //System.out.println("Result should be equal: 002Y4MBN3X1B = " + employeeId);
+        //System.out.println("Result is correct: " + employeeId.equals("002Y4MBN3X1B"));
     }
 
 }
