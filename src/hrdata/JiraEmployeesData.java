@@ -47,7 +47,8 @@ public class JiraEmployeesData {
     private static String excludedHREMID;
     private static String botname;
     private static String searchString = "project=HREM";
-    private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID";
+    //see https://jira.dyninno.net/rest/api/2/field
+    private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID,Transliteration,Level 1,Level 2,Level 3,Level 4,Level 5,Level 6,Level 7,Level 8,Level 9,Type";
     private static String excludedSummaryFieldValue = "test";
 
     /**
@@ -226,15 +227,31 @@ public class JiraEmployeesData {
         } else if (name.equalsIgnoreCase("Status")) {
             output = issue.getStatus().toString();
         } else if (name.equalsIgnoreCase("Business Email")) {
-            output = issue.getField(getFieldKeyByName(name).toString()).toString();
-            if (output != null && !output.contains("@")) {
+            //            output = issue.getField(getFieldKeyByName(name).toString()).toString();
+            //            if (output != null && !output.contains("@")) {
+            //                output = "";
+            //            }
+            //            if (output.isEmpty() || output.equals("null")) {
+            //                output = issue.getField(getFieldKeyByName("Employee").toString()).toString();
+            //                if (output.contains("/rest/api/2/user?username")) {
+            //                    output = new JSONObject(output).getString("emailAddress").toString();
+            //                }
+            // To change primary business email from Business email to User profile email
+            output = issue.getField(getFieldKeyByName("Employee").toString()).toString();
+            if (output.contains("/rest/api/2/user?username")) {
+                output = new JSONObject(output).getString("emailAddress").toString();
+                if (output != null && !output.contains("@")) {
+                    output = "";
+                }
+            } else {
                 output = "";
             }
             if (output.isEmpty() || output.equals("null")) {
-                output = issue.getField(getFieldKeyByName("Employee").toString()).toString();
-                if (output.contains("/rest/api/2/user?username")) {
-                    output = new JSONObject(output).getString("emailAddress").toString();
-                }
+                output = issue.getField(getFieldKeyByName(name).toString()).toString();
+            }
+            output=output.toLowerCase();
+            if (output != null && !output.contains("@")) {
+                output = "";
             }
         } else if (name.equalsIgnoreCase("jiraEmployeeID")) {
             String personId = issue.getField(getFieldKeyByName("ID Code").toString()).toString();
