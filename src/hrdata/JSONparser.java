@@ -1267,12 +1267,12 @@ public class JSONparser {
         JSONparser json;
         if (hrmURL != null && emcURL == null) {
             System.out.println("hrmURL != null && emcURL==null");
-
+           // Add certificate properties to access on hrm 
+           initializeClientCertParam(emcClientCertificateType, emcClientCertificateFile, emcClientCertificateSecret);
             json = new JSONparser(direction, emcJsonFile, hrmURL, hrmOUTCSVFile, filterFieldName, filterValues);
 
-        } else if (hrmURL != null && emcURL != null) {
+        } else if (hrmURL != null || emcURL != null) {
             System.out.println("hrmURL != null && emcURL!=null");
-
             initializeClientCertParam(emcClientCertificateType, emcClientCertificateFile, emcClientCertificateSecret);
             json = new JSONparser(direction, emcURL, emcOUTCSVFile, hrmURL, hrmOUTCSVFile, filterFieldName, filterValues);
         } else {
