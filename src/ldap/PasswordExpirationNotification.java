@@ -44,26 +44,27 @@ public class PasswordExpirationNotification {
     private final String SPECUSER = "SPECUSER";
     private final String INITIALPASS = "INITIALPASS";
     private final String WARNINGPASS = "WARNINGPASS";
-    private String debugFilename = "mail_pwd.log";
     private static CharSequence UID = "%UID%";
     private static CharSequence DISPLAYNAME = "%DISPLAYNAME%";
     private static CharSequence PWD = "%PWD%";
     private EmailUtil mail;
-    private Boolean forceSend = true;
-    private static String passNotifTemplFile = "pwdExpEmail.template";
-    private static String initEmailNotifiTemplFile = "initialEmailForWP.template";
     private static String mailPropFile = "mail.properties";
-    // private static String ldapPropFile = "ldap.properties";
     private static String ldapPropFile = "ldap.properties.prod";
+    
+//    private Boolean forceSend = true;
+//    private String debugFilename = "mail_pwd.log";
+//    private static String passNotifTemplFile = "pwdExpEmail.template";
+//    private static String initEmailNotifiTemplFile = "initialEmailForWP.template";
 
-    //////////////////////
-    private String passwordExpiration = "365";
-    private String initialsNotificationInterval = "0,1,2,4,8,16,32,64";
-    private String notificationInterval = "1,2,4,8,16,32,64,90,180"; //Countdown 
-    private String specialUsers = "";
-    private String specialOU = "ou=Services,ou=Administrators";
-    private String debugEmailsToFile = "false";
-
+    
+ // private static String ldapPropFile = "ldap.properties";
+//    //////////////////////
+//    private String passwordExpiration = "365";
+//    private String initialsNotificationInterval = "0,1,2,4,8,16,32,64";
+//    private String notificationInterval = "1,2,4,8,16,32,64,90,180"; //Countdown 
+//    private String specialUsers = "";
+//    private String specialOU = "ou=Services,ou=Administrators";
+//    private String debugEmailsToFile = "false";
     /////////////////////
     public static void main(String[] args) throws NamingException, MessagingException, UnsupportedEncodingException, IOException, ParseException {
         PasswordExpirationNotification sup = new PasswordExpirationNotification();
@@ -110,9 +111,9 @@ public class PasswordExpirationNotification {
     }
 
     private void analyzeSearchResult(NamingEnumeration<SearchResult> sr) throws NamingException, ParseException, IOException, MessagingException {
-        int i=0;
+        int i = 0;
         while (sr.hasMore()) {
-            
+
             SearchResult account = sr.next();
             //System.out.println(account);
             String accountDN = account.getNameInNamespace();
@@ -141,6 +142,10 @@ public class PasswordExpirationNotification {
                 displayName = (String) attributes.get("displayName").get();
             }
 
+            if (mail == null) {
+                initEmail();
+            }
+
             if (checkUserSpecialOU(accountDN)) {
                 //For some special containers gather details and send to technical iam mailbox
                 System.out.println("account from special OU : " + accountDN);
@@ -149,9 +154,6 @@ public class PasswordExpirationNotification {
                 //send notification about password change
                 System.out.println("Check pwdChangedTime");
                 if (shouldSendMailWithCountdown(pwdChangedTime)) {
-                    if (mail == null) {
-                        initEmail();
-                    }
                     System.out.println("Send PWD expiration notification: " + uid + " : " + pwdChangedTime);
                     sendEmailNotification(mail, displayName, uid, pwdChangedTime);
                     putAnalitic(WARNINGPASS, accountDN);
@@ -165,20 +167,17 @@ public class PasswordExpirationNotification {
                 //send notification about initial password  
                 System.out.println("Check initialPassword");
                 if (shouldSendInitialMail(createTimestamp) || getForceSend()) {
-                    if (mail == null) {
-                        initEmail();
-                    }
                     System.out.println("Send initial mail: " + uid + " : " + createTimestamp);
                     sendInitialEmailNotification(mail, displayName, uid, createTimestamp);
                     putAnalitic(INITIALPASS, accountDN);
-                    i=i+1;
+                    i = i + 1;
                 }
             }
         }
 
         System.out.println("Send analitic");
         sendAnalitic(adminEmail);
-        System.out.println("Number of initial mails="+i);
+        System.out.println("Number of initial mails=" + i);
         this.close();
     }
 
@@ -259,51 +258,51 @@ public class PasswordExpirationNotification {
 
     private ArrayList getInitialsNotificationInterval() {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        String[] intervalArr = initialsNotificationInterval.split(",", -2);
+        String[] intervalArr = mail.getInitialsNotificationInterval().split(",", -2);
         ArrayList intervalArrList = new ArrayList<>(Arrays.asList(intervalArr));
         return intervalArrList;
     }
 
     private ArrayList getNotificationInterval() {
-        String[] intervalArr = notificationInterval.split(",", -2);
+        String[] intervalArr = mail.getNotificationInterval().split(",", -2);
         ArrayList intervalArrList = new ArrayList<>(Arrays.asList(intervalArr));
         return intervalArrList;
     }
 
     private ArrayList getSpecialOUList() {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        String[] intervalArr = specialOU.split(",", -2);
+        String[] intervalArr = mail.getSpecialOU().split(",", -2);
         ArrayList intervalArrList = new ArrayList<>(Arrays.asList(intervalArr));
         return intervalArrList;
     }
 
     private ArrayList getSpecialUserList() {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        String[] intervalArr = specialUsers.split(",", -2);
+        String[] intervalArr = mail.getSpecialUsers().split(",", -2);
         ArrayList intervalArrList = new ArrayList<>(Arrays.asList(intervalArr));
         return intervalArrList;
     }
 
     private String getDebugEmails() {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        return debugEmailsToFile;
+        return mail.getDebugEmailsToFile();
     }
 
-    private void sendEmailNotification(String mail, String displayName, String uid, String pwdChangedTime) throws IOException, MessagingException {
+    private void sendEmailNotification(String mailAddress, String displayName, String uid, String pwdChangedTime) throws IOException, MessagingException {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         String debug = getDebugEmails();
         if (debug == null || debug.equalsIgnoreCase("true")) {
             System.out.println("Debug notification");
-            writeEmailTofile(debugFilename, mail, uid, displayName, pwdChangedTime);
+            writeEmailTofile(mail.getDebugFilename(), mailAddress, uid, displayName, pwdChangedTime);
 
         } else {
             if (adminEmail == null) {
                 getAdminEmail();
             }
-            if (mail == null) {
+            if (mailAddress == null) {
                 initEmail();
             }
-            sendNotification(mail, displayName, uid, pwdChangedTime);
+            sendNotification(mailAddress, displayName, uid, pwdChangedTime);
         }
 
     }
@@ -318,7 +317,7 @@ public class PasswordExpirationNotification {
         String debug = getDebugEmails();
         if (debug == null || debug.equalsIgnoreCase("true")) {
             System.out.println("Debug notification");
-            writeEmailTofile(debugFilename, recipient, uid, displayName, createTimestamp);
+            writeEmailTofile(mail.getDebugFilename(), recipient, uid, displayName, createTimestamp);
 
         } else {
             if (recipient == null || recipient.isEmpty()) {
@@ -424,7 +423,7 @@ public class PasswordExpirationNotification {
     }
 
     public Boolean getForceSend() {
-        return forceSend;
+        return Boolean.getBoolean(mail.getForceSend());
     }
 
     private void sendNotification(String recipient, String displayName, String uid, String pwdChangedTime) throws IOException, MessagingException {
@@ -452,12 +451,12 @@ public class PasswordExpirationNotification {
 
     private String getPasswordNotificationSubjectTemplate() throws FileNotFoundException, IOException {
         // throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        return readFromFile(passNotifTemplFile, "subject");
+        return readFromFile(mail.getPassNotifTemplFile(), "subject");
     }
 
     private String getPasswordNotificationBodyTemplate() throws FileNotFoundException, IOException {
         //    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        return readFromFile(passNotifTemplFile, "body");
+        return readFromFile(mail.getPassNotifTemplFile(), "body");
     }
 
     public String getAdminEmail() {
@@ -472,12 +471,12 @@ public class PasswordExpirationNotification {
 
     private String getInitialEmailNotificationSubjectTemplate() throws FileNotFoundException, IOException {
         //    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        return readFromFile(initEmailNotifiTemplFile, "subject");
+        return readFromFile(mail.getInitEmailNotifiTemplFile(), "subject");
     }
 
     private String getInitialEmailNotificationBodyTemplate() throws FileNotFoundException, IOException {
         // throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        return readFromFile(initEmailNotifiTemplFile, "body");
+        return readFromFile(mail.getInitEmailNotifiTemplFile(), "body");
     }
 
     private String readFromFile(String filename, String property) throws UnsupportedEncodingException, FileNotFoundException, IOException {
@@ -492,7 +491,7 @@ public class PasswordExpirationNotification {
     }
 
     private String getpasswordExpiration() {
-        return this.passwordExpiration;
+        return mail.getPasswordExpiration();
     }
 
     private Boolean checkpasswordExpirationInterval(ArrayList expirationNotificationInterval, String passwordExpirationPolicy, String passwordAge) {

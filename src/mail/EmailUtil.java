@@ -45,6 +45,98 @@ public class EmailUtil {
     private String fromAddress = "noreply@example.com";
     private String fromDisplayName = "no-reply-User";
     private String pathToAttach = "";
+    private String passwordExpiration = "365";
+    private String initialsNotificationInterval = "0,1,2,4,8,16,32,64";
+    private String notificationInterval = "1,2,4,8,16,32,64,90,180"; //Countdown 
+    private String specialUsers = "";
+    private String specialOU = "ou=Services,ou=Administrators";
+    private String debugEmailsToFile = "false";
+    //
+    private String forceSend = "true";
+    private String debugFilename = "mail_pwd.log";
+    private static String passNotifTemplFile = "pwdExpEmail.template";
+    private static String initEmailNotifiTemplFile = "initialEmailForWP.template";
+
+    public String getForceSend() {
+        return forceSend;
+    }
+
+    public String getDebugFilename() {
+        return debugFilename;
+    }
+
+    public static String getPassNotifTemplFile() {
+        return passNotifTemplFile;
+    }
+
+    public static String getInitEmailNotifiTemplFile() {
+        return initEmailNotifiTemplFile;
+    }
+
+    public void setForceSend(String forceSend) {
+        this.forceSend = forceSend;
+    }
+
+    public void setDebugFilename(String debugFilename) {
+        this.debugFilename = debugFilename;
+    }
+
+    public static void setPassNotifTemplFile(String passNotifTemplFile) {
+        EmailUtil.passNotifTemplFile = passNotifTemplFile;
+    }
+
+    //////////////////////////////////////////////////
+    public static void setInitEmailNotifiTemplFile(String initEmailNotifiTemplFile) {
+        EmailUtil.initEmailNotifiTemplFile = initEmailNotifiTemplFile;
+    }
+
+    public String getPasswordExpiration() {
+        return passwordExpiration;
+    }
+
+    public String getInitialsNotificationInterval() {
+        return initialsNotificationInterval;
+    }
+
+    public String getNotificationInterval() {
+        return notificationInterval;
+    }
+
+    public String getSpecialUsers() {
+        return specialUsers;
+    }
+
+    public String getSpecialOU() {
+        return specialOU;
+    }
+
+    public String getDebugEmailsToFile() {
+        return debugEmailsToFile;
+    }
+
+    public void setPasswordExpiration(String passwordExpiration) {
+        this.passwordExpiration = passwordExpiration;
+    }
+
+    public void setInitialsNotificationInterval(String initialsNotificationInterval) {
+        this.initialsNotificationInterval = initialsNotificationInterval;
+    }
+
+    public void setNotificationInterval(String notificationInterval) {
+        this.notificationInterval = notificationInterval;
+    }
+
+    public void setSpecialUsers(String specialUsers) {
+        this.specialUsers = specialUsers;
+    }
+
+    public void setSpecialOU(String specialOU) {
+        this.specialOU = specialOU;
+    }
+
+    public void setDebugEmailsToFile(String debugEmailsToFile) {
+        this.debugEmailsToFile = debugEmailsToFile;
+    }
 
     public void setFromAddress(String fromAddress) {
         this.fromAddress = fromAddress;
@@ -127,11 +219,32 @@ public class EmailUtil {
         this.setFromDisplayName(fromDisplayName);
         String pathToAttach = prop.getProperty("pathToAttach", "");
         this.setPathToAttach(pathToAttach);
+        String passwordExpiration = prop.getProperty("passwordExpiration", "365");
+        this.setPasswordExpiration(passwordExpiration);
+        String initialsNotificationInterval = prop.getProperty("initialsNotificationInterval", "0,1,2,4,8,16,32,64");
+        this.setInitialsNotificationInterval(initialsNotificationInterval);
+        String notificationInterval = prop.getProperty("notificationInterval", "1,2,4,8,16,32,64,90,180");
+        this.setNotificationInterval(notificationInterval);
+        String specialUsers = prop.getProperty("specialUsers", "administrator");
+        this.setSpecialUsers(specialUsers);
+        String specialOU = prop.getProperty("specialOU", "ou=Services,ou=Administrators");
+        this.setSpecialOU(specialOU);
+        String debugEmailsToFile = prop.getProperty("debugEmailsToFile", "false");
+        this.setDebugEmailsToFile(debugEmailsToFile);
+        String forceSend = prop.getProperty("forceSend", "true");
+        this.setForceSend(forceSend);
+        String debugFilename = prop.getProperty("debugFilename", "mail_pwd.log");
+        this.setDebugFilename(debugFilename);
+        String passNotifTemplFile = prop.getProperty("passNotifTemplFile", "pwdExpEmail.template");
+        this.setPassNotifTemplFile(passNotifTemplFile);
+        String initEmailNotifiTemplFile = prop.getProperty("initEmailNotifiTemplFile", "initialEmailForWP.template");
+        this.setInitEmailNotifiTemplFile(initEmailNotifiTemplFile);
 
         if (verbose != null && verbose.equalsIgnoreCase("true")) {
             System.out.println("Working Directory = " + System.getProperty("user.dir"));
             System.out.println("#############################jsonparser.properties#################################");
             System.out.println("verbose: " + verbose);
+            System.out.println("smtpHostServer: " + smtpHostServer);
             System.out.println("port: " + port);
             System.out.println("starttlsEnable: " + starttlsEnable);
             System.out.println("smtpAuth: " + smtpAuth);
@@ -139,6 +252,17 @@ public class EmailUtil {
             System.out.println("fromAddress: " + fromAddress);
             System.out.println("fromDisplayName: " + fromDisplayName);
             System.out.println("pathToAttach: " + pathToAttach);
+            System.out.println("passwordExpiration: " + passwordExpiration);
+            System.out.println("initialsNotificationInterval: " + initialsNotificationInterval);
+            System.out.println("notificationInterval: " + notificationInterval);
+            System.out.println("specialUsers: " + specialUsers);
+            System.out.println("specialOU: " + specialOU);
+            System.out.println("debugEmailsToFile: " + debugEmailsToFile);
+            System.out.println("forceSend: " + forceSend);
+            System.out.println("debugFilename: " + debugFilename);
+            System.out.println("passNotifTemplFile: " + passNotifTemplFile);
+            System.out.println("initEmailNotifiTemplFile: " + initEmailNotifiTemplFile);
+            System.out.println("Use in email templates: %UID% %DISPLAYNAME% %PWD%");
             System.out.println("#############################EOF#################################");
         }
 
