@@ -55,6 +55,8 @@ public class JSONparser {
     private Map jsonMapHRM = new HashMap< String, String>();
     private String[] outputArray;
     private String personId = "99999999999";
+    private static Boolean emcIsActiveOnly;
+
 
     /**
      *
@@ -708,7 +710,7 @@ public class JSONparser {
 
             // Если нужны все пользователи то тогда есть смысл внести изменения Есть ли у пользователей логины и активны ли они 
             //oldValue  sourceId password
-            if (obj2.isNull("login") == false && obj2.get("isActive").equals("1")) {
+            if (obj2.isNull("login") == false && (obj2.get("isActive").equals("1") || !emcIsActiveOnly)) {
                 String csvStringValues = "";
                 if (obj2.isNull("hrmId") == false) {
                     hrmId = obj2.get("hrmId").toString();
@@ -1130,6 +1132,13 @@ public class JSONparser {
 
         return returnString;
     }
+    public static void setEmcIsActiveOnly(String emcIsActiveOnly) {
+        Boolean toReturn=true;
+        if(emcIsActiveOnly!=null && (emcIsActiveOnly.equalsIgnoreCase("0") || emcIsActiveOnly.equalsIgnoreCase("false"))){
+        toReturn=false;
+        }
+        JSONparser.emcIsActiveOnly = toReturn;
+    }
 
     private String cleanOfSpecSymbols(String inputString) {
 
@@ -1244,6 +1253,7 @@ public class JSONparser {
         String emcClientCertificateType = prop.getProperty("emcClientCertificateType");
         String emcClientCertificateFile = prop.getProperty("emcClientCertificatePath");
         String emcClientCertificateSecret = prop.getProperty("emcClientCertificateSecret");
+        setEmcIsActiveOnly(prop.getProperty("emcIsActiveOnly"));
 
         if (inputParameter != null && inputParameter.equalsIgnoreCase("-v")) {
             System.out.println("Working Directory = " + System.getProperty("user.dir"));
@@ -1260,6 +1270,7 @@ public class JSONparser {
             System.out.println("emcClientCertificateType: " + prop.getProperty("emcClientCertificateType"));
             System.out.println("emcClientCertificatePath: " + prop.getProperty("emcClientCertificatePath"));
             System.out.println("emcClientCertificateSecret: secret");
+            System.out.println("emcIsActiveOnly: " + prop.getProperty("emcIsActiveOnly"));
             System.out.println("#############################EOF#################################");
         }
 
