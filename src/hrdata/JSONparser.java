@@ -28,6 +28,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.zip.DataFormatException;
 
+
 /**
  *
  * @author onekriach 20.12.2017 EMC Api Version 11
@@ -854,7 +855,7 @@ public class JSONparser {
 
         // Проверяем данные оставляя только не дублирующие данные (исключение несколько активных логинов у активного пользователя)
         Map validRecords = getValidRecords(validationMapActive, validationMapDeactivated);
-        hmap = getCorrectHmapByKeys(validRecords);
+        hmap = getCorrectHmapByKeys(hmap, validRecords);
 
         //System.out.println(hmap.size());
         this.jsonMapEMC = hmap;
@@ -1335,8 +1336,10 @@ public class JSONparser {
         return returnMap;
     }
 
-    private Map getCorrectHmapByKeys(Map validRecords) {
-        // TODO
+    private Map getCorrectHmapByKeys(Map inputMap, Map validRecords) {
+        Map returnMap = new HashMap<String, String>();
+        
+        
         return validRecords;
     }
 
