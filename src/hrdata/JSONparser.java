@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.Properties;
+import java.util.Set;
 import java.util.zip.DataFormatException;
 
 /**
@@ -56,7 +57,6 @@ public class JSONparser {
     private String[] outputArray;
     private String personId = "99999999999";
     private static Boolean emcIsActiveOnly;
-
 
     /**
      *
@@ -608,8 +608,9 @@ public class JSONparser {
      * @return @throws IOException
      */
     public String[] EMCJsonToArray() throws IOException {
-        System.out.println("В EMC анализируются только активные пользователи у которых есть логины");
-
+        if (emcIsActiveOnly) {
+            System.out.println("В EMC анализируются только активные пользователи у которых есть логины");
+        }
         JSONObject obj = new JSONObject(this.StringFromStream());
         JSONObject objGetByKey;
         String emcApiVersion = "";
@@ -652,12 +653,16 @@ public class JSONparser {
 
         Iterator<String> keySetIter = firstRow.keys();
         String hrmId = "";
+        String employeeId = "";
+        String isActive = "";
         Map hmap = new HashMap<String, String>();
-
+        Map validationMapActive = new HashMap<String, String>();
+        Map validationMapDeactivated = new HashMap<String, String>();
         String csvKeysString = "";
         String keySetIternextValue = "";
         String[] keys = new String[firstRow.keySet().size()];
         int k = 0;
+
         while (keySetIter.hasNext()) {
             keySetIternextValue = keySetIter.next();
 
@@ -717,6 +722,7 @@ public class JSONparser {
                 } else {
                     hrmId = "dummy-" + i;
                 }
+
                 for (int p = 0; p < keys.length; p++) {
 
                     String toAdd = "";
@@ -813,6 +819,15 @@ public class JSONparser {
 
                 }
 
+                // Формируем мапы  в которых сортируем записи по активным и неактивным
+                employeeId = obj2.get("employeeId").toString().toString();
+                isActive = obj2.get("isActive").toString();
+                if (isActive.equalsIgnoreCase("1")) {
+                    validationMapActive.put(employeeId, hrmId);
+                } else {
+                    validationMapDeactivated.put(employeeId, hrmId);
+                }
+
                 //добавляем в хеш мап не пустые csv строки и ключ hrmid(pid)
                 if (csvStringValues.isEmpty() == false) {
                     // System.out.println(hrmId + ": " + csvStringValues);
@@ -836,6 +851,10 @@ public class JSONparser {
             returnArray[0] = csvKeysString;
             hmap.replace("csvFieldNames", csvKeysString);
         }
+
+        // Проверяем данные оставляя только не дублирующие данные (исключение несколько активных логинов у активного пользователя)
+        Map validRecords = getValidRecords(validationMapActive, validationMapDeactivated);
+        hmap = getCorrectHmapByKeys(validRecords);
 
         //System.out.println(hmap.size());
         this.jsonMapEMC = hmap;
@@ -1132,10 +1151,12 @@ public class JSONparser {
 
         return returnString;
     }
+
+    // TODO
     public static void setEmcIsActiveOnly(String emcIsActiveOnly) {
-        Boolean toReturn=true;
-        if(emcIsActiveOnly!=null && (emcIsActiveOnly.equalsIgnoreCase("0") || emcIsActiveOnly.equalsIgnoreCase("false"))){
-        toReturn=false;
+        Boolean toReturn = true;
+        if (emcIsActiveOnly != null && (emcIsActiveOnly.equalsIgnoreCase("0") || emcIsActiveOnly.equalsIgnoreCase("false"))) {
+            toReturn = false;
         }
         JSONparser.emcIsActiveOnly = toReturn;
     }
@@ -1263,9 +1284,13 @@ public class JSONparser {
             System.out.println("hrmJsonFile: " + prop.getProperty("hrmJsonFile"));
             System.out.println("filterFieldName: " + prop.getProperty("filterFieldName"));
             System.out.println("filterValues: " + prop.getProperty("filterValues"));
-            System.out.println("hrmURL: " + prop.getProperty("hrmURL").substring(0, 36) + "...");
+            if (hrmURL != null) {
+                System.out.println("hrmURL: " + prop.getProperty("hrmURL").substring(0, 36) + "...");
+            }
             System.out.println("hrmOUTCSVFile: " + prop.getProperty("hrmOUTCSVFile"));
-            System.out.println("emcURL: " + prop.getProperty("emcURL").substring(0, 36) + "...");
+            if (hrmURL != null) {
+                System.out.println("emcURL: " + prop.getProperty("emcURL").substring(0, 36) + "...");
+            }
             System.out.println("emcOUTCSVFile: " + prop.getProperty("emcOUTCSVFile"));
             System.out.println("emcClientCertificateType: " + prop.getProperty("emcClientCertificateType"));
             System.out.println("emcClientCertificatePath: " + prop.getProperty("emcClientCertificatePath"));
@@ -1278,8 +1303,8 @@ public class JSONparser {
         JSONparser json;
         if (hrmURL != null && emcURL == null) {
             System.out.println("hrmURL != null && emcURL==null");
-           // Add certificate properties to access on hrm 
-           initializeClientCertParam(emcClientCertificateType, emcClientCertificateFile, emcClientCertificateSecret);
+            // Add certificate properties to access on hrm 
+            initializeClientCertParam(emcClientCertificateType, emcClientCertificateFile, emcClientCertificateSecret);
             json = new JSONparser(direction, emcJsonFile, hrmURL, hrmOUTCSVFile, filterFieldName, filterValues);
 
         } else if (hrmURL != null || emcURL != null) {
@@ -1294,6 +1319,25 @@ public class JSONparser {
 
         json.run();
 
+    }
+
+    private Map getValidRecords(Map validationMapActive, Map validationMapDeactivated) {
+        Map returnMap = new HashMap<String, String>();
+        returnMap.putAll(validationMapActive);
+        Set ks = validationMapDeactivated.keySet();
+        Iterator itr = ks.iterator();
+        while (itr.hasNext()) {
+            String key = (String) itr.next();
+            if (!returnMap.containsKey(key)) {
+                returnMap.put(key, validationMapDeactivated.get(key));
+            }
+        }
+        return returnMap;
+    }
+
+    private Map getCorrectHmapByKeys(Map validRecords) {
+        // TODO
+        return validRecords;
     }
 
 }
