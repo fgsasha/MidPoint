@@ -24,10 +24,14 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.zip.DataFormatException;
-
 
 /**
  *
@@ -58,6 +62,7 @@ public class JSONparser {
     private String[] outputArray;
     private String personId = "99999999999";
     private static Boolean emcIsActiveOnly;
+    private static String excludeLogins = null;
 
     /**
      *
@@ -657,8 +662,8 @@ public class JSONparser {
         String employeeId = "";
         String isActive = "";
         Map hmap = new HashMap<String, String>();
-        Map validationMapActive = new HashMap<String, String>();
-        Map validationMapDeactivated = new HashMap<String, String>();
+        Map validationMapActive = new HashMap<String[], String>();
+        Map validationMapDeactivated = new HashMap<String[], String>();
         String csvKeysString = "";
         String keySetIternextValue = "";
         String[] keys = new String[firstRow.keySet().size()];
@@ -715,8 +720,8 @@ public class JSONparser {
             }
 
             // Если нужны все пользователи то тогда есть смысл внести изменения Есть ли у пользователей логины и активны ли они 
-            //oldValue  sourceId password
-            if (obj2.isNull("login") == false && (obj2.get("isActive").equals("1") || !emcIsActiveOnly)) {
+            // TODO В условие нужно будет добавить проверку признача что что логин основной
+            if (obj2.isNull("login") == false && (obj2.get("isActive").equals("1") || !emcIsActiveOnly) && checkIfLoginsPrimary(obj2.get("login")) && checkIfNotExcludeLogin(obj2.get("login"))) {
                 String csvStringValues = "";
                 if (obj2.isNull("hrmId") == false) {
                     hrmId = obj2.get("hrmId").toString();
@@ -808,32 +813,32 @@ public class JSONparser {
                             csvStringValues = csvStringValues + this.delimiter;
                         } else //TODO
                         //Добавляем в конец, доролнительные данные
-                        if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")) {
-                            String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
-                            String mainEmail = getMainEmail(inputData);
-                            csvStringValues = csvStringValues + this.delimiter + mainEmail;
-                            //Добавляем пустое значение для locationId
-                            csvStringValues = csvStringValues + this.delimiter + "";
+                         if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")) {
+                                String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
+                                String mainEmail = getMainEmail(inputData);
+                                csvStringValues = csvStringValues + this.delimiter + mainEmail;
+                                //Добавляем пустое значение для locationId
+                                csvStringValues = csvStringValues + this.delimiter + "";
 
-                        }
+                            }
                     }
 
-                }
-
-                // Формируем мапы  в которых сортируем записи по активным и неактивным
-                employeeId = obj2.get("employeeId").toString().toString();
-                isActive = obj2.get("isActive").toString();
-                if (isActive.equalsIgnoreCase("1")) {
-                    validationMapActive.put(employeeId, hrmId);
-                } else {
-                    validationMapDeactivated.put(employeeId, hrmId);
                 }
 
                 //добавляем в хеш мап не пустые csv строки и ключ hrmid(pid)
                 if (csvStringValues.isEmpty() == false) {
                     // System.out.println(hrmId + ": " + csvStringValues);
+
+//Формируем мапы  в которых сортируем записи по активным и неактивным. TODO Ограничение (исключение несколько активных логинов у активного пользователя, активным логин всегда будет только один, выбранный случайным образом))
+                    employeeId = obj2.get("employeeId").toString().toString();
+                    isActive = obj2.get("isActive").toString();
+                    if (isActive.equalsIgnoreCase("1")) {
+                        validationMapActive.put(employeeId, csvStringValues);
+                    } else {
+                        validationMapDeactivated.put(employeeId, csvStringValues);
+                    }
+
                     hmap.put(hrmId, csvStringValues);
-                    //System.out.println(csvStringValues);
                 }
 
                 returnArray[i + 1] = csvStringValues;
@@ -844,18 +849,26 @@ public class JSONparser {
             }
 
         }
-//        int emcActiveUsers = hmap.size() + 1;
-//        System.out.println("EMC processed records after filter out: " + emcActiveUsers);
+
+// Проверяем данные оставля только не дублирующие данные (исключение несколько активных логинов у активного пользователя, активным логин всегда будет только один, выбранный случайным образом))
+        Map validRecords = getValidRecords(validationMapActive, validationMapDeactivated);
+/////////////////////////////////////////////
+        //TODO Нужно вернуться к решению проблемы когда, по ключу вытягивается только одна запись, из-за чего корректно получить данные не  Вернутся когда снова интегрируемся с HRM. To есть использование hmap не подходит. 
+//       hmap = new HashMap<String, String>(getCorrectHmapByKeys(hmap, validRecords));
+//       Object[] arr = hmap.values().toArray();
+//        returnArray = new String[hmap.size()];
+//        for(int i=0; i < arr.length; i++){
+//        returnArray[i]= (String) arr[i];
+//        }
+/////////////////////////////////////////////
+        returnArray = getCorrectUniqArrayByEmployeeID(returnArray, validRecords);
+
         // Для совместимости кода в завимости от версии EMC API и для V9 и для V10 , добавляем в 0 позицию хеш мап дополнительные поля в csvKeysString  
         if (emcApiVersion != null && emcApiVersion.equalsIgnoreCase("V10")) {
             csvKeysString = csvKeysString + this.delimiter + "emails,locationId";
             returnArray[0] = csvKeysString;
             hmap.replace("csvFieldNames", csvKeysString);
         }
-
-        // Проверяем данные оставляя только не дублирующие данные (исключение несколько активных логинов у активного пользователя)
-        Map validRecords = getValidRecords(validationMapActive, validationMapDeactivated);
-        hmap = getCorrectHmapByKeys(hmap, validRecords);
 
         //System.out.println(hmap.size());
         this.jsonMapEMC = hmap;
@@ -1055,6 +1068,24 @@ public class JSONparser {
         return result;
     }
 
+    Boolean checkInListStrong(String checkedValue, String inputString, String delimiter) {
+        Boolean result = Boolean.FALSE;
+        if (checkedValue == null || checkedValue.isEmpty()) {
+            result = false;
+        } else {
+            String[] arrayInputData = inputString.toLowerCase().split(delimiter, -1);
+            for (int i = 0; i < arrayInputData.length; i++) {
+                //применяем строгое сравнение но не чуствительное к регистру
+                if (checkedValue.equalsIgnoreCase(arrayInputData[i])) {
+                    return true;
+                } else {
+                    result = false;
+                }
+            }
+        }
+        return result;
+    }
+
     private void toCSVFile() throws IOException {
         int l = 0;
         PrintWriter writer = new PrintWriter(this.outputCSVFilePath, "UTF-8");
@@ -1160,6 +1191,10 @@ public class JSONparser {
             toReturn = false;
         }
         JSONparser.emcIsActiveOnly = toReturn;
+    }
+
+    public static void setExcludeLogins(String excludeLogins) {
+        JSONparser.excludeLogins = excludeLogins;
     }
 
     private String cleanOfSpecSymbols(String inputString) {
@@ -1276,6 +1311,7 @@ public class JSONparser {
         String emcClientCertificateFile = prop.getProperty("emcClientCertificatePath");
         String emcClientCertificateSecret = prop.getProperty("emcClientCertificateSecret");
         setEmcIsActiveOnly(prop.getProperty("emcIsActiveOnly"));
+        setExcludeLogins(prop.getProperty("excludeLogins"));
 
         if (inputParameter != null && inputParameter.equalsIgnoreCase("-v")) {
             System.out.println("Working Directory = " + System.getProperty("user.dir"));
@@ -1297,6 +1333,7 @@ public class JSONparser {
             System.out.println("emcClientCertificatePath: " + prop.getProperty("emcClientCertificatePath"));
             System.out.println("emcClientCertificateSecret: secret");
             System.out.println("emcIsActiveOnly: " + prop.getProperty("emcIsActiveOnly"));
+            System.out.println("excludeLogins: " + prop.getProperty("excludeLogins"));
             System.out.println("#############################EOF#################################");
         }
 
@@ -1337,10 +1374,63 @@ public class JSONparser {
     }
 
     private Map getCorrectHmapByKeys(Map inputMap, Map validRecords) {
+
         Map returnMap = new HashMap<String, String>();
-        
-        
-        return validRecords;
+        Collection k = inputMap.keySet();
+        Iterator kit = k.iterator();
+        String key = "";
+        String val = "";
+        while (kit.hasNext()) {
+            key = (String) kit.next();
+            val = (String) inputMap.get(key);
+            System.out.println(val);
+            if (validRecords.containsValue(val) || key.equalsIgnoreCase("csvFieldNames")) {
+                returnMap.put(key, val);
+            }
+        }
+        System.out.println("returnMap.size:" + returnMap.size());
+
+        return returnMap;
     }
 
+    private String[] getCorrectUniqArrayByEmployeeID(String[] inputArray, Map validRecords) {
+
+        ArrayList arr = new ArrayList();
+        ArrayList outputArr = new ArrayList();
+        for (int j = 0; j < inputArray.length; j++) {
+            arr.add(j, inputArray[j]);
+        }
+
+        Iterator it = arr.iterator();
+
+        while (it.hasNext()) {
+            Object val = it.next();
+            if (val != null) {
+                String valStr = val.toString();
+                if (validRecords.containsValue(val) || valStr.equalsIgnoreCase("csvFieldNames")) {
+                    outputArr.add(val);
+                }
+            }
+        }
+        String[] outArr = new String[outputArr.size()];
+        for (int i = 0; i < outputArr.size(); i++) {
+            outArr[i] = (String) outputArr.get(i);
+        }
+        return outArr;
+    }
+
+    private boolean checkIfLoginsPrimary(Object get) {
+        // TODO should waiting IAM-13
+        return true;
+    }
+
+    private boolean checkIfNotExcludeLogin(Object login) {
+        Boolean checkResult = true;
+        if (excludeLogins == null) {
+            return true;
+        } else {
+            checkResult = !this.checkInListStrong(login.toString(), excludeLogins, this.delimiter);
+            return checkResult;
+        }
+    }
 }
