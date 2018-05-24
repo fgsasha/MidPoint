@@ -280,7 +280,7 @@ public class EmailUtil {
 
         MimeMessage msg = new MimeMessage(session);
         //set message headers
-        msg.addHeader("Content-type", "text/HTML; charset=UTF-8");
+        msg.addHeader("Content-type", "text/html; charset=UTF-8");
         msg.addHeader("format", "flowed");
         msg.addHeader("Content-Transfer-Encoding", "8bit");
         msg.setFrom(new InternetAddress(fromAddress, fromDisplayName));
@@ -295,14 +295,17 @@ public class EmailUtil {
         System.out.println("Message is ready");
         // creates message part
         MimeBodyPart messageBodyPart = new MimeBodyPart();
-        messageBodyPart.setContent(body, "text/html");
-
+        messageBodyPart.setContent(body, "text/html; charset=UTF-8");
+        
+        
+        
         // creates multi-part
         Multipart multipart = new MimeMultipart();
         multipart.addBodyPart(messageBodyPart);
         // sets the multi-part as e-mail's content
         msg.setContent(multipart);
         // sends the e-mail
+
         Transport.send(msg);
         System.out.println("EMail Sent Successfully!!");
 
@@ -320,7 +323,7 @@ public class EmailUtil {
 
         MimeMessage msg = new MimeMessage(session);
         //set message headers
-        msg.addHeader("Content-type", "text/HTML; charset=UTF-8");
+        msg.addHeader("Content-type", "text/html; charset=UTF-8");
         msg.addHeader("format", "flowed");
         msg.addHeader("Content-Transfer-Encoding", "8bit");
 //
@@ -338,7 +341,8 @@ public class EmailUtil {
         System.out.println("Message is ready");
         // creates message part
         MimeBodyPart messageBodyPart = new MimeBodyPart();
-        messageBodyPart.setContent(body, "text/html");
+        messageBodyPart.setContent(body, "text/html; charset=UTF-8");
+        messageBodyPart.setHeader("Content-Transfer-Encoding", "8bit");
 
         // creates multi-part
         Multipart multipart = new MimeMultipart();

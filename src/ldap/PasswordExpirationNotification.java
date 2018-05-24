@@ -49,7 +49,7 @@ public class PasswordExpirationNotification {
     private static CharSequence PWD = "%PWD%";
     private EmailUtil mail;
     private static String mailPropFile = "mail.properties";
-    private static String ldapPropFile = "ldap.properties.prod";
+    private static String ldapPropFile = "ldap.properties";
     
 //    private Boolean forceSend = true;
 //    private String debugFilename = "mail_pwd.log";
@@ -122,7 +122,7 @@ public class PasswordExpirationNotification {
 
             String pwdChangedTime = null;
             String createTimestamp = null;
-            String mail = null;
+            String ldapMail = null;
             String uid = null;
             String displayName = null;
 
@@ -133,7 +133,7 @@ public class PasswordExpirationNotification {
                 createTimestamp = (String) attributes.get("createTimestamp").get();
             }
             if (attributes.get("mail") != null) {
-                mail = (String) attributes.get("mail").get();
+                ldapMail = (String) attributes.get("mail").get();
             }
             if (attributes.get("uid") != null) {
                 uid = (String) attributes.get("uid").get();
@@ -153,9 +153,9 @@ public class PasswordExpirationNotification {
             } else if (pwdChangedTime != null && !pwdChangedTime.isEmpty() && !pwdChangedTime.equalsIgnoreCase(createTimestamp)) {
                 //send notification about password change
                 System.out.println("Check pwdChangedTime");
-                if (shouldSendMailWithCountdown(pwdChangedTime)) {
+                if (shouldSendMailWithCountdown(pwdChangedTime) || getForceSend()) {
                     System.out.println("Send PWD expiration notification: " + uid + " : " + pwdChangedTime);
-                    sendEmailNotification(mail, displayName, uid, pwdChangedTime);
+                    sendEmailNotification(ldapMail, displayName, uid, pwdChangedTime);
                     putAnalitic(WARNINGPASS, accountDN);
                 }
             } else if (checkForSpecialUser(uid)) {
@@ -168,7 +168,7 @@ public class PasswordExpirationNotification {
                 System.out.println("Check initialPassword");
                 if (shouldSendInitialMail(createTimestamp) || getForceSend()) {
                     System.out.println("Send initial mail: " + uid + " : " + createTimestamp);
-                    sendInitialEmailNotification(mail, displayName, uid, createTimestamp);
+                    sendInitialEmailNotification(ldapMail, displayName, uid, createTimestamp);
                     putAnalitic(INITIALPASS, accountDN);
                     i = i + 1;
                 }
@@ -309,7 +309,7 @@ public class PasswordExpirationNotification {
 
     private void sendInitialEmailNotification(String recipient, String displayName, String uid, String createTimestamp) throws IOException, MessagingException, ParseException {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        //https://www.journaldev.com/2532/javamail-example-send-mail-in-java-smtp
+        //https://www.journaldev.com/2532/javamail-example-send-ldapMail-in-java-smtp
 
         // System.out.println("SimpleEmail Start");
         String toEmail = null;
@@ -423,11 +423,11 @@ public class PasswordExpirationNotification {
     }
 
     public Boolean getForceSend() {
-        return Boolean.getBoolean(mail.getForceSend());
+        return Boolean.parseBoolean(mail.getForceSend());
     }
 
     private void sendNotification(String recipient, String displayName, String uid, String pwdChangedTime) throws IOException, MessagingException {
-        //https://www.journaldev.com/2532/javamail-example-send-mail-in-java-smtp
+        //https://www.journaldev.com/2532/javamail-example-send-ldapMail-in-java-smtp
 
         // System.out.println("SimpleEmail Start");
         String toEmail = null;
@@ -464,7 +464,7 @@ public class PasswordExpirationNotification {
     }
 
     private void initEmail() throws IOException {
-        //https://www.journaldev.com/2532/javamail-example-send-mail-in-java-smtp
+        //https://www.journaldev.com/2532/javamail-example-send-ldapMail-in-java-smtp
         System.out.println("Init Email");
         mail = new EmailUtil(mailPropFile);
     }
