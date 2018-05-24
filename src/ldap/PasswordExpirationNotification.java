@@ -296,7 +296,7 @@ public class PasswordExpirationNotification {
             writeEmailTofile(mail.getDebugFilename(), mailAddress, uid, displayName, pwdChangedTime);
 
         } else {
-            if (adminEmail == null) {
+            if  (adminEmail == null) {
                 getAdminEmail();
             }
             if (mailAddress == null) {
