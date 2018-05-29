@@ -121,7 +121,7 @@ public class HTMLutils {
             if (inputUrl.startsWith("https")) {
 
                 urlConnectionHttps = (HttpsURLConnection) url.openConnection();
-                //urlConnectionHttps.setHostnameVerifier(hostnameVerifier);
+                urlConnectionHttps.setHostnameVerifier(hostnameVerifier);
 
                 String urlParameters = "return=index.php&username=" + username + "&password=" + passw;
                 byte[] postData = urlParameters.getBytes(StandardCharsets.UTF_8);
@@ -139,11 +139,11 @@ public class HTMLutils {
 
                 writer.write(urlParameters);
                 writer.flush();
-                String line;
-                BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnectionHttps.getInputStream()));
-                while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
-                }
+//                String line;
+//                BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnectionHttps.getInputStream()));
+//                while ((line = reader.readLine()) != null) {
+//                    System.out.println(line);
+//                }
 
                 //CookieHandler.setDefault(manager);
                 Map<String, List<String>> headerFields = urlConnectionHttps.getHeaderFields();
@@ -154,7 +154,7 @@ public class HTMLutils {
                     }
 
                     writer.close();
-                    reader.close();
+                    //reader.close();
 
                 } else {
                     throw new RuntimeException("Using unsecure  protocol for authentication: " + inputUrl);
@@ -181,10 +181,10 @@ public class HTMLutils {
 
             BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
             body = new String(readAll(rd));
-            String line;
-            while ((line = rd.readLine()) != null) {
-                System.out.println(line);
-            }
+//            String line;
+//            while ((line = rd.readLine()) != null) {
+//                System.out.println(line);
+//            }
             rd.close();
 
             return body;

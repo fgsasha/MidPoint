@@ -26,7 +26,7 @@ public class MantisUtil {
     Logger log = Logger.getLogger(MantisUtil.class.getName());
     static String ENABLED_PATERN = ".*?<input type=\"checkbox\" name=\"enabled\"  checked=\"(.*?)\"  />.*?";
     static String PROTECTED_PATERN = ".*?<input type=\"checkbox\" name=\"protected\"  checked=\"(.*?)\"  />.*?";
-    static String ACCESS_PATERN = ".*?<select name=\"access_level\">\r\n.*<option value=\"(.*?)\" selected=\"selected\" >.*";
+    static String ACCESS_PATERN = "(?s).*?<select name=\"access_level\">.*?[\r\n].*?<option value=\"([\\d]+?)\" selected=\"selected\" >.*?";
     static String TOKEN_PATERN = ".*?<input type=\"hidden\" name=\"manage_user_update_token\" id=\"manage_user_update_token\" value=\"(.*?)\"/>.*?";
     static String USERID_PATERN = ".*?<input type=\"hidden\" name=\"user_id\" value=\"(.*?)\" />.*?";
 
@@ -42,6 +42,10 @@ public class MantisUtil {
         if (m.find()) {
             matchedString = m.group(1);
         }
+        if(matchedString==null){
+        log.info("getEnabled:matchedString: " + matchedString);
+        return false;
+        }
         log.info("getEnabled:matchedString: " + matchedString);
         return matchedString.equalsIgnoreCase("checked");
     }
@@ -53,6 +57,10 @@ public class MantisUtil {
         String matchedString = null;
         if (m.find()) {
             matchedString = m.group(1);
+        }
+        if(matchedString==null){
+        log.info("getProtected:matchedString: " + matchedString);
+        return false;
         }
         log.info("getProtected:matchedString: " + matchedString);
         return matchedString.equalsIgnoreCase("checked");
@@ -66,6 +74,10 @@ public class MantisUtil {
         if (m.find()) {
             matchedString = m.group(1);
         }
+        if(matchedString==null){
+        log.info("getAccessLevel:matchedString: " + matchedString);
+        return null;
+        }
         log.info("getAccessLevel:matchedString: " + matchedString);
         return matchedString;
     }
@@ -77,6 +89,10 @@ public class MantisUtil {
         String matchedString = null;
         if (m.find()) {
             matchedString = m.group(1);
+        }        
+        if(matchedString==null){
+        log.info("getUpdateToken:matchedString: " + matchedString);
+        return null;
         }
         log.info("getUpdateToken:matchedString: " + matchedString);
         return matchedString;
@@ -89,6 +105,10 @@ public class MantisUtil {
         String matchedString = null;
         if (m.find()) {
             matchedString = m.group(1);
+        }
+        if(matchedString==null){
+        log.info("getUserId:matchedString: " + matchedString);
+        return null;
         }
         log.info("getUserId:matchedString: " + matchedString);
         return matchedString;
@@ -103,9 +123,9 @@ public class MantisUtil {
         CookieManager manager = htmlOutput.getManager();
         CookieStore cookieJar = manager.getCookieStore();
         List<HttpCookie> cookies = cookieJar.getCookies();
-        for (HttpCookie cookie : cookies) {
-            System.out.println(cookie);
-        }
-        System.out.println("body: " + body);
+//        for (HttpCookie cookie : cookies) {
+//            System.out.println(cookie);
+//        }
+//        System.out.println("body: " + body);
     }
 }

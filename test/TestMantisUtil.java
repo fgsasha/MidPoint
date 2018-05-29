@@ -21,18 +21,19 @@ import org.apache.commons.codec.binary.StringUtils;
  */
 public class TestMantisUtil {
     public String getUserInfo() throws IOException{
-        String url = "<do login URL>";
+        String url = "<URL1>";
         HTMLutils htmlOutput = new HTMLutils();
-        htmlOutput.doAuthenticationMantis(url, "<login>", "<password>");
-        String body = htmlOutput.getHttpBody("get URL 1");
+        htmlOutput.doAuthenticationMantis(url, "<Username1>", "<Pass1>");
+        String username="a.ivasko";
+        String body = new String(htmlOutput.getHttpBody("<URL2>"+username));
 
-        CookieManager manager = htmlOutput.getManager();
-        CookieStore cookieJar = manager.getCookieStore();
-        List<HttpCookie> cookies = cookieJar.getCookies();
-        for (HttpCookie cookie : cookies) {
-            System.out.println(cookie);
-        }
-        System.out.println("body: " + body);
+//        CookieManager manager = htmlOutput.getManager();
+//        CookieStore cookieJar = manager.getCookieStore();
+//        List<HttpCookie> cookies = cookieJar.getCookies();
+//        for (HttpCookie cookie : cookies) {
+//            System.out.println(cookie);
+//        }
+//        System.out.println("body: " + body);
     return body;
     }
     
