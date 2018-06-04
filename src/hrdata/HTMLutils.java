@@ -14,14 +14,17 @@ import java.io.Reader;
 import java.net.CookieManager;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSession;
+import javax.xml.bind.ValidationException;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONException;
 
@@ -34,6 +37,7 @@ public class HTMLutils {
     private CookieManager manager = new CookieManager();
     static final String COOKIES_HEADER = "Set-Cookie";
     static final String COOKIE_REQUEST_HEADER = "Cookie";
+    private HostnameVerifier hostnameVerifier;
 
     public CookieManager getManager() {
         return manager;
@@ -98,6 +102,7 @@ public class HTMLutils {
 
     /**
      * Do authentication and fill up manager with cookies
+     *
      * @param inputUrl - URL address
      * @param username - username to do authentication
      * @param passw - password to do authentication
@@ -105,7 +110,7 @@ public class HTMLutils {
      * @throws JSONException
      */
     public void doAuthenticationMantis(String inputUrl, String username, String passw) throws IOException, JSONException {
-        HostnameVerifier hostnameVerifier = new HostnameVerifier() {
+        hostnameVerifier = new HostnameVerifier() {
             @Override
             public boolean verify(String hostname, SSLSession session) {
                 return true;
@@ -174,24 +179,77 @@ public class HTMLutils {
         String body = null;
         HttpsURLConnection urlConnectionHttps = null;
         try {
-            urlConnectionHttps = (HttpsURLConnection) url.openConnection();
-            urlConnectionHttps.setRequestMethod("GET");
-            this.populateCookieHeaders(urlConnectionHttps);
-            is = urlConnectionHttps.getInputStream();
+            if (texturl.startsWith("https")) {
+                urlConnectionHttps = (HttpsURLConnection) url.openConnection();
+                urlConnectionHttps.setHostnameVerifier(hostnameVerifier);
+                urlConnectionHttps.setRequestMethod("GET");
+                this.populateCookieHeaders(urlConnectionHttps);
+                is = urlConnectionHttps.getInputStream();
+        Map<String, List<String>> headerFields = urlConnectionHttps.getHeaderFields();
+                List<String> cookiesHeader = headerFields.get(COOKIES_HEADER);
+                if (cookiesHeader != null) {
+                    for (String cookie : cookiesHeader) {
+                        manager.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
+                    }
+                }
+                BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
+                body = new String(readAll(rd));
+                rd.close();
 
-            BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
-            body = new String(readAll(rd));
-//            String line;
-//            while ((line = rd.readLine()) != null) {
-//                System.out.println(line);
-//            }
-            rd.close();
-
-            return body;
+                return body;
+            } else {
+                throw new VerifyError("http protocol is not supported yet");
+            }
         } finally {
             if (urlConnectionHttps != null) {
                 urlConnectionHttps.disconnect();
             }
+        }
+    }
+
+    public String postHttpBody(String texturl, Map parameters) throws IOException, JSONException {
+        URL url = new URL(texturl);
+        InputStream is = null;
+        String body = null;
+        HttpsURLConnection urlConnectionHttps = null;
+        try {
+            if (texturl.startsWith("https")) {
+                urlConnectionHttps = (HttpsURLConnection) url.openConnection();
+                urlConnectionHttps.setHostnameVerifier(hostnameVerifier);
+                String urlParameters = this.postParametersFromMap(parameters);
+                byte[] postData = urlParameters.getBytes(StandardCharsets.UTF_8);
+                int postDataLength = postData.length;
+                urlConnectionHttps.setDoOutput(true);
+                urlConnectionHttps.setInstanceFollowRedirects(false);
+                urlConnectionHttps.setRequestMethod("POST");
+                urlConnectionHttps.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                urlConnectionHttps.setRequestProperty("charset", "utf-8");
+                urlConnectionHttps.setRequestProperty("Content-Length", Integer.toString(postDataLength));
+                urlConnectionHttps.setUseCaches(false);
+                urlConnectionHttps.setDoOutput(true);
+                this.populateCookieHeaders(urlConnectionHttps);
+                OutputStreamWriter writer = new OutputStreamWriter(urlConnectionHttps.getOutputStream());
+
+                writer.write(urlParameters);
+                writer.flush();
+                writer.close();
+                Map<String, List<String>> headerFields = urlConnectionHttps.getHeaderFields();
+                List<String> cookiesHeader = headerFields.get(COOKIES_HEADER);
+                if (cookiesHeader != null) {
+                    for (String cookie : cookiesHeader) {
+                        manager.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
+                    }
+                }
+                is = urlConnectionHttps.getInputStream();
+                BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
+                body = new String(readAll(rd));
+                return body;
+
+            } else {
+                throw new VerifyError("http protocol is not supported yet");
+            }
+
+        } finally {
             if (urlConnectionHttps != null) {
                 urlConnectionHttps.disconnect();
             }
@@ -215,5 +273,28 @@ public class HTMLutils {
     public void disconnect(HttpsURLConnection conn) {
         conn.disconnect();
     }
-  
+
+    String postParametersFromMap(Map inputData) {
+        String result = "";
+        String parameterDelimiter = null;
+        if (inputData == null) {
+            return null;
+        }
+        Iterator it = inputData.keySet().iterator();
+        while (it.hasNext()) {
+            String key = (String) it.next();
+            String value = (String) inputData.get(key);
+            if (value.contains("&")) {
+                throw new VerifyError("Invalid parameter. POST parameter cannot contain & symbol in : " + value);
+            }
+            if (result.isEmpty()) {
+                parameterDelimiter = "";
+            } else {
+                parameterDelimiter = "&";
+            }
+            result = result + parameterDelimiter + key + "=" + value;
+        }
+        return result;
+    }
+
 }

@@ -24,14 +24,48 @@ import javax.net.ssl.HttpsURLConnection;
 public class MantisUtil {
 
     Logger log = Logger.getLogger(MantisUtil.class.getName());
+    static String REALNAME_PATERN ="(?s).*?<!-- Realname -->[\\r\\n].*?\\t*?([^\\t]+)\\t*?</td>[\\r\\n]+</tr>.*?";
+    static String EMAIL_PATERN = "(?s).*?<!-- Email -->[\\r\\n].*?\\t*?([^\\t]+)\\t*?</td>[\\r\\n]+</tr>.*?";
     static String ENABLED_PATERN = ".*?<input type=\"checkbox\" name=\"enabled\"  checked=\"(.*?)\"  />.*?";
     static String PROTECTED_PATERN = ".*?<input type=\"checkbox\" name=\"protected\"  checked=\"(.*?)\"  />.*?";
     static String ACCESS_PATERN = "(?s).*?<select name=\"access_level\">.*?[\r\n].*?<option value=\"([\\d]+?)\" selected=\"selected\" >.*?";
-    static String TOKEN_PATERN = ".*?<input type=\"hidden\" name=\"manage_user_update_token\" id=\"manage_user_update_token\" value=\"(.*?)\"/>.*?";
+    static String UPDATETOKEN_PATERN = ".*?<input type=\"hidden\" name=\"manage_user_update_token\" id=\"manage_user_update_token\" value=\"(.*?)\"/>.*?";
     static String USERID_PATERN = ".*?<input type=\"hidden\" name=\"user_id\" value=\"(.*?)\" />.*?";
+    static String CREATETOKEN_PATERN = ".*?<input type=\"hidden\" name=\"manage_user_create_token\" id=\"manage_user_create_token\" value=\"(.*?)\"/>.*?";
 
     void MantisUtil() {
     log.setLevel(Level.INFO);    
+    }
+        public String getRealname(String body) {
+        log.finest("getRealname body: " + body);
+        Pattern p = Pattern.compile(REALNAME_PATERN);
+        Matcher m = p.matcher(body);
+        String matchedString = null;
+        if (m.find()) {
+            matchedString = m.group(1);
+        }
+        if(matchedString==null){
+        log.info("getRealname:matchedString: " + matchedString);
+        return null;
+        }
+        log.info("getRealname:matchedString: " + matchedString);
+        return matchedString;
+    }
+        
+        public String getEmail(String body) {
+        log.finest("getEmail body: " + body);
+        Pattern p = Pattern.compile(EMAIL_PATERN);
+        Matcher m = p.matcher(body);
+        String matchedString = null;
+        if (m.find()) {
+            matchedString = m.group(1);
+        }
+        if(matchedString==null){
+        log.info("getEmail:matchedString: " + matchedString);
+        return null;
+        }
+        log.info("getEmail:matchedString: " + matchedString);
+        return matchedString;
     }
     
     public Boolean getEnabled(String body) {
@@ -84,7 +118,7 @@ public class MantisUtil {
 
     public String getUpdateToken(String body) {
         log.finest("getUpdateToken body: " + body);
-        Pattern p = Pattern.compile(TOKEN_PATERN);
+        Pattern p = Pattern.compile(UPDATETOKEN_PATERN);
         Matcher m = p.matcher(body);
         String matchedString = null;
         if (m.find()) {
@@ -95,6 +129,21 @@ public class MantisUtil {
         return null;
         }
         log.info("getUpdateToken:matchedString: " + matchedString);
+        return matchedString;
+    }
+    public String getCreateToken(String body) {
+        log.finest("getCreateToken body: " + body);
+        Pattern p = Pattern.compile(CREATETOKEN_PATERN);
+        Matcher m = p.matcher(body);
+        String matchedString = null;
+        if (m.find()) {
+            matchedString = m.group(1);
+        }        
+        if(matchedString==null){
+        log.info("getCreateToken:matchedString: " + matchedString);
+        return null;
+        }
+        log.info("getCreateToken:matchedString: " + matchedString);
         return matchedString;
     }
 
