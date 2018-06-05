@@ -32,6 +32,7 @@ public class MantisHttpClient {
     final String OP_USERID = "user_id";
     final String OP_UPDATETOKEN = "manage_user_update_token";
     final String OP_CREATETOKEN = "manage_user_create_token";
+    final int users_on_page = 50;
 
     ///////////////////
     final String LOGIN_URL = "/login.php";
@@ -40,6 +41,7 @@ public class MantisHttpClient {
     final String MANAGEUSER_PAGE = "/manage_user_edit_page.php?username=";
     final String CREATEUSER_PAGE = "/manage_user_create_page.php";
     final String COOKIE = "MANTIS_STRING_COOKIE";
+    final String LISTUSER_PAGE = "/manage_user_page.php?filter=ALL&hideinactive=0&showdisabled=1&sort=username&dir=ASC&page_number=";
 
     private Map currentUserData = null;
     private String url;
@@ -105,7 +107,7 @@ public class MantisHttpClient {
         if (currentUserData == null) {
             createUserProfile(inputUserData);
             result = false;
-        } else if (compareMapsIsEqlLeft(inputUserData, currentUserData)) {
+        } else if (util.compareMapsIsEqlLeft(inputUserData, currentUserData)) {
             result = false;
         } else {
             result = true;
@@ -140,11 +142,6 @@ public class MantisHttpClient {
         return returnMap;
     }
 
-    private boolean compareMapsIsEqlLeft(Map inputUserData, Map currentUserData) {
-        // todo
-        return false;
-    }
-
     void createUser(Map inputUserData) throws IOException {
         if (inputUserData == null) {
             throw new VerifyError("Nothing to create input User data is null");
@@ -155,6 +152,7 @@ public class MantisHttpClient {
             throw new VerifyError("For some reason cant create user: " + inputUserData.get(USERNAME));
         }
         inputUserData.put(OP_CREATETOKEN, createtoken);
+        inputUserData = util.normalizeUserInputData(inputUserData, null);
         html.postHttpBody(url + CREATEUSER_URL, inputUserData);
     }
 
@@ -170,12 +168,27 @@ public class MantisHttpClient {
             currentUserData = getUserData((String) inputUserData.get(USERNAME));
         } else {
             String updatetoken = (String) currentUserData.get(OP_UPDATETOKEN);
-            String userid = (String) currentUserData.get(OP_USERID); 
+            String userid = (String) currentUserData.get(OP_USERID);
             inputUserData.put(OP_UPDATETOKEN, updatetoken);
             inputUserData.put(OP_USERID, userid);
+            inputUserData = util.normalizeUserInputData(inputUserData, currentUserData);
             html.postHttpBody(url + UPDATEUSER_URL, inputUserData);
             getUserData((String) inputUserData.get(USERNAME));
         }
 
+    }
+
+    public Map<String, HashMap<String, List<String>>> reconcileUserData() throws IOException {
+        Map<String, HashMap<String, List<String>>> searchResult = new HashMap<String, HashMap<String, List<String>>>();
+        String firstPagebodyhtml = html.getHttpBody(url + LISTUSER_PAGE + 1);
+        int num = util.getNumberOfUsers(firstPagebodyhtml);
+        int numpgs = ((num + users_on_page - 1) / users_on_page);
+        util.getUsersAttributes(firstPagebodyhtml);
+        for (int i = 2; i <= numpgs; i++) {
+            String pageBody = html.getHttpBody(url + LISTUSER_PAGE + i);
+            util.getUsersAttributes(pageBody);
+        }
+        System.out.println("Total recon users: " + util.getSearchResult().size());
+        return util.getSearchResult();
     }
 }

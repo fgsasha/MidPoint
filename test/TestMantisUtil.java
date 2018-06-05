@@ -83,13 +83,20 @@ public class TestMantisUtil {
         client.connect(url, userAdmin, password);
         client.createUserProfile(initUserData());
     }
+
     void testUpdateUser() throws IOException {
         MantisHttpClient client = new mantis.MantisHttpClient();
         client.init();
         client.connect(url, userAdmin, password);
         client.updateUserProfile(initUserData());
     }
-    
+
+    private void reconcileUsers() throws IOException {
+        MantisHttpClient client = new mantis.MantisHttpClient();
+        client.init();
+        client.connect(url, userAdmin, password);
+        client.reconcileUserData();
+    }
 
     Map initUserData() {
         Map<String, String> returnMap = new HashMap<String, String>();
@@ -106,12 +113,13 @@ public class TestMantisUtil {
         TestMantisUtil test = new TestMantisUtil();
         // Test connection parameters
 
-        ////////////
-        
+        //////////// true false null(empty)
+
         //test.testConnection();
         //test.testGetUserData();
         //test.testCreateUser();
-        test.testUpdateUser();
-
+        //test.testUpdateUser();
+        test.reconcileUsers();
     }
+
 }
