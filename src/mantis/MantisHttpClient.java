@@ -13,6 +13,9 @@ import java.net.HttpCookie;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import mantis.MantisUtil;
 
 /**
  *
@@ -20,30 +23,39 @@ import java.util.Map;
  */
 public class MantisHttpClient {
 
+    public void MantisHttpClient() {
+        log.setLevel(Level.INFO);
+    }
+
+    Logger log = Logger.getLogger(MantisUtil.class.getName());
+
     private MantisUtil util;
     private HTMLutils html;
     //POST parameters//
-    final String USERNAME = "username";
-    final String EMAIL = "email";
-    final String REALNAME = "realname";
-    final String ACCESSLEVEL = "access_level";
-    final String ENABLED = "enabled";
-    final String PROTECTED = "protected";
-    final String OP_USERID = "user_id";
-    final String OP_UPDATETOKEN = "manage_user_update_token";
-    final String OP_CREATETOKEN = "manage_user_create_token";
-    final int users_on_page = 50;
+    final static String USERNAME = "username";
+    final static String EMAIL = "email";
+    final static String REALNAME = "realname";
+    final static String ACCESSLEVEL = "access_level";
+    final static String ENABLED = "enabled";
+    final static String PROTECTED = "protected";
+    final static String OP_USERID = "user_id";
+    final static String OP_UPDATETOKEN = "manage_user_update_token";
+    final static String OP_CREATETOKEN = "manage_user_create_token";
+    final static String OP_CREATEPAGETOKEN = "manage_user_create_page_token";
+    final static int users_on_page = 50;
 
     ///////////////////
-    final String LOGIN_URL = "/login.php";
-    final String CREATEUSER_URL = "/manage_user_create.php";
-    final String UPDATEUSER_URL = "/manage_user_update.php";
-    final String MANAGEUSER_PAGE = "/manage_user_edit_page.php?username=";
-    final String CREATEUSER_PAGE = "/manage_user_create_page.php";
-    final String COOKIE = "MANTIS_STRING_COOKIE";
-    final String LISTUSER_PAGE = "/manage_user_page.php?filter=ALL&hideinactive=0&showdisabled=1&sort=username&dir=ASC&page_number=";
+    final static String LOGIN_URL = "/login.php";
+    final static String CREATEUSER_URL = "/manage_user_create.php";
+    final static String UPDATEUSER_URL = "/manage_user_update.php";
+    final static String MANAGEUSER_PAGE = "/manage_user_page.php";
+    final static String EDITUSER_PAGE = "/manage_user_edit_page.php?username=";
+    final static String CREATEUSER_PAGE = "/manage_user_create_page.php";
+    final static String COOKIE = "MANTIS_STRING_COOKIE";
+    final static String LISTUSER_PAGE = "/manage_user_page.php?filter=ALL&hideinactive=0&showdisabled=1&sort=username&dir=ASC&page_number=";
 
     private Map currentUserData = null;
+
     private String url;
 
     public void setUrl(String url) {
@@ -52,7 +64,7 @@ public class MantisHttpClient {
 
     public void init() {
         util = new mantis.MantisUtil();
-        html = new HTMLutils();
+        html = new hrdata.HTMLutils();
     }
 
     public boolean connect(String url, String username, String pass) throws IOException {
@@ -81,39 +93,46 @@ public class MantisHttpClient {
      * @param inputUserData the value of inputUserData
      */
     public String createUserProfile(Map inputUserData) throws IOException {
-        String userid=null;
-        if (currentUserData == null) {
-            currentUserData = getUserData((String) inputUserData.get(USERNAME));
+        String userid = null;
+        if (this.currentUserData == null) {
+            this.currentUserData = this.getUserData((String) inputUserData.get(USERNAME));
         }
-        if (currentUserData == null) {
-            createUser(inputUserData);
-            currentUserData = getUserData((String) inputUserData.get(USERNAME));
+        if (this.currentUserData == null) {
+            this.createUser(inputUserData);
+            this.currentUserData = this.getUserData((String) inputUserData.get(USERNAME));
         } else {
             throw new VerifyError("User " + (String) inputUserData.get(USERNAME) + " already exist");
         }
-        if(currentUserData!=null){
-        userid=(String)currentUserData.get(OP_USERID);
+        if (this.currentUserData != null) {
+            userid = (String) this.currentUserData.get(OP_USERID);
+        } else {
+            throw new VerifyError("Cant create user");
         }
         return userid;
     }
 
     public String updateUserProfile(Map userData) throws IOException {
+        String userid = null;
         if (userShouldBeUpdated(userData)) {
-            updateUser(userData);
-        }        
-        String userid=(String)getUserData((String) userData.get(USERNAME)).get(OP_USERID);
-        return userid;
+            this.updateUser(userData);
+        }
+        if (this.currentUserData != null) {
+            userid = (String) this.currentUserData.get(OP_USERID);
+        } else {
+            throw new VerifyError("Cant update user. No such user");
+        }
+
+        return null;
     }
 
     private boolean userShouldBeUpdated(Map inputUserData) throws IOException {
         boolean result;
-        if (currentUserData == null) {
-            currentUserData = getUserData((String) inputUserData.get(USERNAME));
+        if (this.currentUserData == null) {
+            this.currentUserData = this.getUserData((String) inputUserData.get(USERNAME));
         }
-        if (currentUserData == null) {
-            createUserProfile(inputUserData);
-            result = false;
-        } else if (util.compareMapsIsEqlLeft(inputUserData, currentUserData)) {
+        if (this.currentUserData == null) {
+            result = true;
+        } else if (util.leftMapsIsEqlLeft(inputUserData, this.currentUserData)) {
             result = false;
         } else {
             result = true;
@@ -124,7 +143,7 @@ public class MantisHttpClient {
 
     public Map getUserData(String username) throws IOException {
         Map<String, String> returnMap = new HashMap<String, String>();
-        String body = html.getHttpBody(url + MANAGEUSER_PAGE + username);
+        String body = html.getHttpBody(url + EDITUSER_PAGE + username);
         String updatetoken = util.getUpdateToken(body);
         if (updatetoken == null) {
             return null;
@@ -144,7 +163,7 @@ public class MantisHttpClient {
         returnMap.put(ACCESSLEVEL, accesslvl);
         returnMap.put(OP_USERID, userid);
         returnMap.put(OP_UPDATETOKEN, updatetoken);
-
+        log.info("CurrentUser data: " + returnMap);
         return returnMap;
     }
 
@@ -152,13 +171,20 @@ public class MantisHttpClient {
         if (inputUserData == null) {
             throw new VerifyError("Nothing to create input User data is null");
         }
-        String createPageBody = html.getHttpBody(url + CREATEUSER_PAGE);
-        String createtoken = util.getCreateToken(createPageBody);
+        String manageUserPageBody = html.getHttpBody(url + MANAGEUSER_PAGE);
+        String createPageToken = util.getCreatePageToken(manageUserPageBody);
+        Map postParameters = new HashMap();
+        postParameters.put(OP_CREATEPAGETOKEN, createPageToken);
+        String createUserPageBody = html.postHttpBody(url + CREATEUSER_PAGE, postParameters);
+        String createtoken = util.getCreateToken(createUserPageBody);
         if (createtoken == null) {
             throw new VerifyError("For some reason cant create user: " + inputUserData.get(USERNAME));
         }
         inputUserData.put(OP_CREATETOKEN, createtoken);
+        inputUserData.remove(OP_UPDATETOKEN, createtoken);
         inputUserData = util.normalizeUserInputData(inputUserData, null);
+        log.info("Create user");
+        log.info("Create inputUserData: " + inputUserData);
         html.postHttpBody(url + CREATEUSER_URL, inputUserData);
     }
 
@@ -166,20 +192,21 @@ public class MantisHttpClient {
         if (inputUserData == null) {
             throw new VerifyError("Nothing to create input User data is null");
         }
-        if (currentUserData == null) {
-            currentUserData = getUserData((String) inputUserData.get(USERNAME));
+        if (this.currentUserData == null) {
+            this.currentUserData = getUserData((String) inputUserData.get(USERNAME));
         }
-        if (currentUserData == null) {
-            createUser(inputUserData);
-            currentUserData = getUserData((String) inputUserData.get(USERNAME));
+        if (this.currentUserData == null) {
+            this.createUserProfile(inputUserData);
+            this.currentUserData = getUserData((String) inputUserData.get(USERNAME));
         } else {
-            String updatetoken = (String) currentUserData.get(OP_UPDATETOKEN);
-            String userid = (String) currentUserData.get(OP_USERID);
+            String updatetoken = (String) this.currentUserData.get(OP_UPDATETOKEN);
+            String userid = (String) this.currentUserData.get(OP_USERID);
             inputUserData.put(OP_UPDATETOKEN, updatetoken);
             inputUserData.put(OP_USERID, userid);
-            inputUserData = util.normalizeUserInputData(inputUserData, currentUserData);
+            inputUserData = util.normalizeUserInputData(inputUserData, this.currentUserData);
+            log.info("Update user");
+            log.info("Update inputUserData: " + inputUserData);
             html.postHttpBody(url + UPDATEUSER_URL, inputUserData);
-            
         }
 
     }

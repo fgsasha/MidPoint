@@ -21,11 +21,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSession;
 import javax.xml.bind.ValidationException;
+import mantis.MantisUtil;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
 import org.json.JSONException;
 
 /**
@@ -33,6 +38,12 @@ import org.json.JSONException;
  * @author onekriach
  */
 public class HTMLutils {
+
+    public void HTMLutils() {
+        log.setLevel(Level.INFO);
+    }
+
+    Logger log = Logger.getLogger(MantisUtil.class.getName());
 
     private CookieManager manager = new CookieManager();
     static final String COOKIES_HEADER = "Set-Cookie";
@@ -119,8 +130,6 @@ public class HTMLutils {
         URL url = new URL(inputUrl);
         InputStream is = null;
         HttpsURLConnection urlConnectionHttps = null;
-        //String cookiesHeader;
-        //final String COOKIES_HEADER = "Set-Cookie";
         try {
 
             if (inputUrl.startsWith("https")) {
@@ -185,7 +194,7 @@ public class HTMLutils {
                 urlConnectionHttps.setRequestMethod("GET");
                 this.populateCookieHeaders(urlConnectionHttps);
                 is = urlConnectionHttps.getInputStream();
-        Map<String, List<String>> headerFields = urlConnectionHttps.getHeaderFields();
+                Map<String, List<String>> headerFields = urlConnectionHttps.getHeaderFields();
                 List<String> cookiesHeader = headerFields.get(COOKIES_HEADER);
                 if (cookiesHeader != null) {
                     for (String cookie : cookiesHeader) {
@@ -219,17 +228,20 @@ public class HTMLutils {
                 String urlParameters = this.postParametersFromMap(parameters);
                 byte[] postData = urlParameters.getBytes(StandardCharsets.UTF_8);
                 int postDataLength = postData.length;
+                log.info("urlParameters " + urlParameters);
                 urlConnectionHttps.setDoOutput(true);
                 urlConnectionHttps.setInstanceFollowRedirects(false);
                 urlConnectionHttps.setRequestMethod("POST");
                 urlConnectionHttps.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                 urlConnectionHttps.setRequestProperty("charset", "utf-8");
                 urlConnectionHttps.setRequestProperty("Content-Length", Integer.toString(postDataLength));
+                urlConnectionHttps.setRequestProperty("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0");
+                urlConnectionHttps.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
                 urlConnectionHttps.setUseCaches(false);
                 urlConnectionHttps.setDoOutput(true);
+                urlConnectionHttps.setDoInput(true);
                 this.populateCookieHeaders(urlConnectionHttps);
                 OutputStreamWriter writer = new OutputStreamWriter(urlConnectionHttps.getOutputStream());
-
                 writer.write(urlParameters);
                 writer.flush();
                 writer.close();
@@ -243,6 +255,8 @@ public class HTMLutils {
                 is = urlConnectionHttps.getInputStream();
                 BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
                 body = new String(readAll(rd));
+                log.finest(body);
+                log.info("Responce msg: " + urlConnectionHttps.getResponseMessage());
                 return body;
 
             } else {
@@ -261,6 +275,7 @@ public class HTMLutils {
         if (this.manager != null) {
             //getting cookies(if any) and manually adding them to the request header
             List<HttpCookie> cookies = this.manager.getCookieStore().getCookies();
+            log.finest("populate cookies: " + cookies);
             if (cookies != null) {
                 if (cookies.size() > 0) {
                     //adding the cookie header
@@ -294,6 +309,7 @@ public class HTMLutils {
             }
             result = result + parameterDelimiter + key + "=" + value;
         }
+        log.info("POST parameters: " + result);
         return result;
     }
 

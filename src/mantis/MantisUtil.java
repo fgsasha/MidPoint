@@ -26,6 +26,8 @@ import javax.net.ssl.HttpsURLConnection;
  */
 public class MantisUtil {
 
+    Logger log = Logger.getLogger(MantisUtil.class.getName());
+
     final String USERNAME = "username";
     final String EMAIL = "email";
     final String REALNAME = "realname";
@@ -43,7 +45,6 @@ public class MantisUtil {
     final String REC_CHEKED = "X";
     final String REC_EMPTY = "&#160;";
 
-    Logger log = Logger.getLogger(MantisUtil.class.getName());
     static String REALNAME_PATERN = "(?s).*?<!-- Realname -->[\\r\\n].*?\\t*?([^\\t]+)\\t*?</td>[\\r\\n]+</tr>.*?";
     static String EMAIL_PATERN = "(?s).*?<!-- Email -->[\\r\\n].*?\\t*?([^\\t]+)\\t*?</td>[\\r\\n]+</tr>.*?";
     static String ENABLED_PATERN = ".*?<input type=\"checkbox\" name=\"enabled\"  checked=\"(.*?)\"  />.*?";
@@ -52,6 +53,7 @@ public class MantisUtil {
     static String UPDATETOKEN_PATERN = ".*?<input type=\"hidden\" name=\"manage_user_update_token\" id=\"manage_user_update_token\" value=\"(.*?)\"/>.*?";
     static String USERID_PATERN = ".*?<input type=\"hidden\" name=\"user_id\" value=\"(.*?)\" />.*?";
     static String CREATETOKEN_PATERN = ".*?<input type=\"hidden\" name=\"manage_user_create_token\" id=\"manage_user_create_token\" value=\"(.*?)\"/>.*?";
+    static String CREATE_PAGETOKEN_PATERN = ".*?<input type=\"hidden\" name=\"manage_user_create_page_token\" id=\"manage_user_create_page_token\" value=\"(.*?)\"/>.*?";
     private String REALNAME_PATERN_2 = ".*?value=\\\"([^\\\"]+?)\\\" />";
     private String EMAIL_PATERN_2 = ".*?value=\\\"([^\\\"]+?)\\\" />";
     private String NUMBEROFUSERS_PATERN = ".*?Manage Accounts \\[([\\d]+)\\].*?";
@@ -218,7 +220,7 @@ public class MantisUtil {
         return matchedString;
     }
 
-    boolean compareMapsIsEqlLeft(Map inputUserData, Map currentUserData) {
+    boolean leftMapsIsEqlLeft(Map inputUserData, Map currentUserData) {
         // todo
         return false;
     }
@@ -237,10 +239,10 @@ public class MantisUtil {
                 result.remove(REALNAME);
             }
             if (inputUserData.get(ACCESSLEVEL) == null || inputUserData.get(ACCESSLEVEL).toString().isEmpty()) {
-                result.replace(ACCESSLEVEL, DEFAULT_ACCESSLEVEL);
+                result.put(ACCESSLEVEL, DEFAULT_ACCESSLEVEL);
             }
             if (inputUserData.get(ENABLED) == null || inputUserData.get(ENABLED).toString().isEmpty()) {
-                result.replace(ENABLED, NATIVE_CHEKED);
+                result.put(ENABLED, NATIVE_CHEKED);
             } else if (inputUserData.get(ENABLED).toString().equalsIgnoreCase(RESOURCE_CHEKED)) {
                 result.replace(ENABLED, NATIVE_CHEKED);
             } else {
@@ -271,7 +273,7 @@ public class MantisUtil {
             }
             if (inputUserData.get(ACCESSLEVEL) == null || inputUserData.get(ACCESSLEVEL).toString().isEmpty()) {
                 if (currentUserData.get(ACCESSLEVEL) == null || currentUserData.get(ACCESSLEVEL).toString().isEmpty()) {
-                    result.replace(ACCESSLEVEL, DEFAULT_ACCESSLEVEL);
+                    result.put(ACCESSLEVEL, DEFAULT_ACCESSLEVEL);
                 } else {
                     result.put(ACCESSLEVEL, currentUserData.get(ACCESSLEVEL).toString());
                 }
@@ -306,18 +308,6 @@ public class MantisUtil {
             }
         }
         return result;
-    }
-
-    public static void main(String[] args) throws IOException {
-        String url = "<do login URL>";
-        HTMLutils htmlOutput = new HTMLutils();
-        htmlOutput.doAuthenticationMantis(url, "<login>", "<password>");
-        String body = htmlOutput.getHttpBody("get URL 1");
-
-        CookieManager manager = htmlOutput.getManager();
-        CookieStore cookieJar = manager.getCookieStore();
-        List<HttpCookie> cookies = cookieJar.getCookies();
-
     }
 
     int getNumberOfUsers(String firstPagebodyhtml) {
@@ -418,4 +408,63 @@ public class MantisUtil {
         return matchedString;
     }
 
+    public String getCreatePageToken(String body) {
+
+        log.finest("getCreatePageToken body: " + body);
+        Pattern p = Pattern.compile(CREATE_PAGETOKEN_PATERN);
+        Matcher m = p.matcher(body);
+        String matchedString = null;
+        if (m.find()) {
+            matchedString = m.group(1);
+        }
+        if (matchedString == null) {
+            log.info("getCreatePageToken:matchedString: " + matchedString);
+            return null;
+        }
+        log.info("getCreatePageToken:matchedString: " + matchedString);
+        return matchedString;
+    }
+
+    public static String ldapGoupToAccLvl(String prefix, String joinedGroup, String delimiter) {
+        String acclvl = null;
+        int intAcc = 0;
+        String viewer = "_viewer";
+        String reporter = "_reporter";
+        String manager = "_manager";
+        String developer = "_developer";
+        String updater = "_updater";
+        String administrator = "_administrator";
+
+        if (joinedGroup != null && prefix != null && delimiter != null) {
+            String[] gr = joinedGroup.toLowerCase().split(delimiter);
+            for (int i = 0; i < gr.length; i++) {
+                int cLvl = 0;
+                if (gr[i].startsWith(prefix)) {
+                    if (gr[i].contains(viewer)) {
+                        cLvl = 0;
+                    } else if (gr[i].contains(viewer)) {
+                        cLvl = 10;
+                    } else if (gr[i].contains(reporter)) {
+                        cLvl = 25;
+                    } else if (gr[i].contains(manager)) {
+                        cLvl = 70;
+                    } else if (gr[i].contains(developer)) {
+                        cLvl = 55;
+                    } else if (gr[i].contains(updater)) {
+                        cLvl = 40;
+                    } else if (gr[i].contains(administrator)) {
+                        cLvl = 90;
+
+                    } else {
+                        cLvl = 25;
+                    }
+                    if (cLvl > intAcc) {
+                        intAcc = cLvl;
+                    }
+                }
+            }
+            acclvl = String.valueOf(intAcc);
+        }
+        return acclvl;
+    }
 }

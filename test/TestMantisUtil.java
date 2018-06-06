@@ -112,14 +112,15 @@ public class TestMantisUtil {
     public static void main(String[] args) throws IOException {
         TestMantisUtil test = new TestMantisUtil();
         // Test connection parameters
-
+       // test.enabled = "true";
+//        test.protectd = "false";
+        //test.accesslvl = "55";
         //////////// true false null(empty)
-
         //test.testConnection();
         //test.testGetUserData();
         //test.testCreateUser();
         //test.testUpdateUser();
-        test.reconcileUsers();
+        //test.reconcileUsers();        
     }
 
 }
