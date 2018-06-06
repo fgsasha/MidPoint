@@ -80,7 +80,8 @@ public class MantisHttpClient {
      *
      * @param inputUserData the value of inputUserData
      */
-    public void createUserProfile(Map inputUserData) throws IOException {
+    public String createUserProfile(Map inputUserData) throws IOException {
+        String userid=null;
         if (currentUserData == null) {
             currentUserData = getUserData((String) inputUserData.get(USERNAME));
         }
@@ -90,13 +91,18 @@ public class MantisHttpClient {
         } else {
             throw new VerifyError("User " + (String) inputUserData.get(USERNAME) + " already exist");
         }
-
+        if(currentUserData!=null){
+        userid=(String)currentUserData.get(OP_USERID);
+        }
+        return userid;
     }
 
-    public void updateUserProfile(Map userData) throws IOException {
+    public String updateUserProfile(Map userData) throws IOException {
         if (userShouldBeUpdated(userData)) {
             updateUser(userData);
-        }
+        }        
+        String userid=(String)getUserData((String) userData.get(USERNAME)).get(OP_USERID);
+        return userid;
     }
 
     private boolean userShouldBeUpdated(Map inputUserData) throws IOException {
@@ -173,7 +179,7 @@ public class MantisHttpClient {
             inputUserData.put(OP_USERID, userid);
             inputUserData = util.normalizeUserInputData(inputUserData, currentUserData);
             html.postHttpBody(url + UPDATEUSER_URL, inputUserData);
-            getUserData((String) inputUserData.get(USERNAME));
+            
         }
 
     }
