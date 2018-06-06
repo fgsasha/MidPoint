@@ -438,11 +438,9 @@ public class MantisUtil {
         if (joinedGroup != null && prefix != null && delimiter != null) {
             String[] gr = joinedGroup.toLowerCase().split(delimiter);
             for (int i = 0; i < gr.length; i++) {
-                int cLvl = 0;
                 if (gr[i].startsWith(prefix)) {
+                    int cLvl = 0;
                     if (gr[i].contains(viewer)) {
-                        cLvl = 0;
-                    } else if (gr[i].contains(viewer)) {
                         cLvl = 10;
                     } else if (gr[i].contains(reporter)) {
                         cLvl = 25;
@@ -454,7 +452,6 @@ public class MantisUtil {
                         cLvl = 40;
                     } else if (gr[i].contains(administrator)) {
                         cLvl = 90;
-
                     } else {
                         cLvl = 25;
                     }
