@@ -436,10 +436,10 @@ public class MantisUtil {
         String administrator = "_administrator";
 
         if (joinedGroup != null && prefix != null && delimiter != null) {
-            String[] gr = joinedGroup.toLowerCase().split(delimiter);
+            int cLvl = 0;
+            String[] gr = joinedGroup.toLowerCase().split(delimiter);            
             for (int i = 0; i < gr.length; i++) {
-                if (gr[i].startsWith(prefix)) {
-                    int cLvl = 0;
+                if (gr[i].startsWith(prefix)) {                    
                     if (gr[i].contains(viewer)) {
                         cLvl = 10;
                     } else if (gr[i].contains(reporter)) {
@@ -453,7 +453,7 @@ public class MantisUtil {
                     } else if (gr[i].contains(administrator)) {
                         cLvl = 90;
                     } else {
-                        cLvl = 25;
+                        cLvl = 5;
                     }
                     if (cLvl > intAcc) {
                         intAcc = cLvl;

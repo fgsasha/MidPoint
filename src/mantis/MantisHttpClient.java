@@ -122,7 +122,7 @@ public class MantisHttpClient {
             throw new VerifyError("Cant update user. No such user");
         }
 
-        return null;
+        return userid;
     }
 
     private boolean userShouldBeUpdated(Map inputUserData) throws IOException {
