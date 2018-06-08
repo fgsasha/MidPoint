@@ -23,6 +23,8 @@ import mantis.MantisUtil;
  */
 public class MantisHttpClient {
 
+    private String searchAttribute;
+
     public void MantisHttpClient() {
         log.setLevel(Level.INFO);
     }
@@ -49,7 +51,7 @@ public class MantisHttpClient {
     final static String CREATEUSER_URL = "/manage_user_create.php";
     final static String UPDATEUSER_URL = "/manage_user_update.php";
     final static String MANAGEUSER_PAGE = "/manage_user_page.php";
-    final static String EDITUSER_PAGE = "/manage_user_edit_page.php?username=";
+    final static String EDITUSER_PAGE = "/manage_user_edit_page.php?";
     final static String CREATEUSER_PAGE = "/manage_user_create_page.php";
     final static String COOKIE = "MANTIS_STRING_COOKIE";
     final static String LISTUSER_PAGE = "/manage_user_page.php?filter=ALL&hideinactive=0&showdisabled=1&sort=username&dir=ASC&page_number=";
@@ -141,9 +143,9 @@ public class MantisHttpClient {
         return result;
     }
 
-    public Map getUserData(String username) throws IOException {
+    public Map getUserData(String identity) throws IOException {
         Map<String, String> returnMap = new HashMap<String, String>();
-        String body = html.getHttpBody(url + EDITUSER_PAGE + username);
+        String body = html.getHttpBody(url + EDITUSER_PAGE +searchAttribute + "="+ identity);
         String updatetoken = util.getUpdateToken(body);
         if (updatetoken == null) {
             return null;
@@ -154,6 +156,7 @@ public class MantisHttpClient {
         String protectd = util.getProtected(body).toString();
         String accesslvl = util.getAccessLevel(body);
         String userid = util.getUserId(body);
+        String username = util.getUsename(body);
 
         returnMap.put(USERNAME, username);
         returnMap.put(REALNAME, realname);
@@ -165,6 +168,10 @@ public class MantisHttpClient {
         returnMap.put(OP_UPDATETOKEN, updatetoken);
         log.info("CurrentUser data: " + returnMap);
         return returnMap;
+    }
+
+    public void setSearchAttribute(String searchAttribute) {
+        this.searchAttribute = searchAttribute;
     }
 
     void createUser(Map inputUserData) throws IOException {
