@@ -464,4 +464,8 @@ public class MantisUtil {
         }
         return acclvl;
     }
+
+    String getUsename(String body) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }
