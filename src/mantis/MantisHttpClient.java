@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.net.HttpCookie;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,12 +24,9 @@ import mantis.MantisUtil;
  */
 public class MantisHttpClient {
 
-    private String searchAttribute;
-
     public void MantisHttpClient() {
         log.setLevel(Level.INFO);
     }
-
     Logger log = Logger.getLogger(MantisUtil.class.getName());
 
     private MantisUtil util;
@@ -57,8 +55,12 @@ public class MantisHttpClient {
     final static String LISTUSER_PAGE = "/manage_user_page.php?filter=ALL&hideinactive=0&showdisabled=1&sort=username&dir=ASC&page_number=";
 
     private Map currentUserData = null;
+    private String url = null;
+    private String searchAttribute = null;
 
-    private String url;
+    public void setSearchAttribute(String searchAttribute) {
+        this.searchAttribute = searchAttribute;
+    }
 
     public void setUrl(String url) {
         this.url = url;
@@ -97,13 +99,15 @@ public class MantisHttpClient {
     public String createUserProfile(Map inputUserData) throws IOException {
         String userid = null;
         if (this.currentUserData == null) {
+            this.setSearchAttribute(USERNAME);
             this.currentUserData = this.getUserData((String) inputUserData.get(USERNAME));
         }
         if (this.currentUserData == null) {
             this.createUser(inputUserData);
+            this.setSearchAttribute(USERNAME);
             this.currentUserData = this.getUserData((String) inputUserData.get(USERNAME));
         } else {
-            throw new VerifyError("User " + (String) inputUserData.get(USERNAME) + " already exist");
+            throw new VerifyError("User " + (String) inputUserData.get(USERNAME) + " already exist. Another reason is wrong user_id for user update: "+inputUserData.get(USERNAME));
         }
         if (this.currentUserData != null) {
             userid = (String) this.currentUserData.get(OP_USERID);
@@ -115,13 +119,36 @@ public class MantisHttpClient {
 
     public String updateUserProfile(Map userData) throws IOException {
         String userid = null;
-        if (userShouldBeUpdated(userData)) {
-            this.updateUser(userData);
+        if (this.currentUserData == null) {
+            if (userData.containsKey(OP_USERID) && !userData.get(OP_USERID).toString().isEmpty()) {
+                this.setSearchAttribute(OP_USERID);
+                this.currentUserData = getUserData((String) userData.get(OP_USERID));
+            } else {
+                this.setSearchAttribute(USERNAME);
+                this.currentUserData = getUserData((String) userData.get(USERNAME));
+            }
         }
-        if (this.currentUserData != null) {
-            userid = (String) this.currentUserData.get(OP_USERID);
+        if (this.currentUserData == null) {
+            this.createUserProfile(userData);
+            this.setSearchAttribute(USERNAME);
+            this.currentUserData = getUserData((String) userData.get(USERNAME));
+            if (this.currentUserData != null) {
+                userid = (String) this.currentUserData.get(OP_USERID);
+            } else {
+                throw new VerifyError("Cant create user. No such user");
+            }
         } else {
-            throw new VerifyError("Cant update user. No such user");
+            if (userShouldBeUpdated(userData)) {
+                this.updateUser(userData);
+            }
+            if (this.currentUserData != null) {
+                userid = (String) this.currentUserData.get(OP_USERID);
+                if(!userData.get(USERNAME).toString().equalsIgnoreCase((String) currentUserData.get(USERNAME))){
+                throw new VerifyError("\nInput User_Id and Username belongs to different users:\ninput: "+userData.get(OP_USERID)+" : "+ userData.get(USERNAME)+"\noutput: "+userid+" : "+ this.currentUserData.get(USERNAME));
+                }
+            } else {
+                throw new VerifyError("User doesnot exist");
+            }
         }
 
         return userid;
@@ -130,6 +157,7 @@ public class MantisHttpClient {
     private boolean userShouldBeUpdated(Map inputUserData) throws IOException {
         boolean result;
         if (this.currentUserData == null) {
+            this.setSearchAttribute(USERNAME);
             this.currentUserData = this.getUserData((String) inputUserData.get(USERNAME));
         }
         if (this.currentUserData == null) {
@@ -144,19 +172,22 @@ public class MantisHttpClient {
     }
 
     public Map getUserData(String identity) throws IOException {
+        if (this.searchAttribute == null) {
+            throw new VerifyError("searchAttribute cannot be null. Please use setSearchAttribute to set value: username or user_id");
+        }
         Map<String, String> returnMap = new HashMap<String, String>();
-        String body = html.getHttpBody(url + EDITUSER_PAGE +searchAttribute + "="+ identity);
+        String body = html.getHttpBody(url + EDITUSER_PAGE + searchAttribute + "=" + identity);
         String updatetoken = util.getUpdateToken(body);
         if (updatetoken == null) {
             return null;
         }
+        String username = util.getUsename(body);
         String realname = util.getRealname(body);
         String email = util.getEmail(body);
         String enabled = util.getEnabled(body).toString();
         String protectd = util.getProtected(body).toString();
         String accesslvl = util.getAccessLevel(body);
         String userid = util.getUserId(body);
-        String username = util.getUsename(body);
 
         returnMap.put(USERNAME, username);
         returnMap.put(REALNAME, realname);
@@ -168,10 +199,6 @@ public class MantisHttpClient {
         returnMap.put(OP_UPDATETOKEN, updatetoken);
         log.info("CurrentUser data: " + returnMap);
         return returnMap;
-    }
-
-    public void setSearchAttribute(String searchAttribute) {
-        this.searchAttribute = searchAttribute;
     }
 
     void createUser(Map inputUserData) throws IOException {
@@ -197,24 +224,16 @@ public class MantisHttpClient {
 
     private void updateUser(Map inputUserData) throws IOException {
         if (inputUserData == null) {
-            throw new VerifyError("Nothing to create input User data is null");
+            throw new VerifyError("Nothing to update input User data is null");
         }
-        if (this.currentUserData == null) {
-            this.currentUserData = getUserData((String) inputUserData.get(USERNAME));
-        }
-        if (this.currentUserData == null) {
-            this.createUserProfile(inputUserData);
-            this.currentUserData = getUserData((String) inputUserData.get(USERNAME));
-        } else {
-            String updatetoken = (String) this.currentUserData.get(OP_UPDATETOKEN);
-            String userid = (String) this.currentUserData.get(OP_USERID);
-            inputUserData.put(OP_UPDATETOKEN, updatetoken);
-            inputUserData.put(OP_USERID, userid);
-            inputUserData = util.normalizeUserInputData(inputUserData, this.currentUserData);
-            log.info("Update user");
-            log.info("Update inputUserData: " + inputUserData);
-            html.postHttpBody(url + UPDATEUSER_URL, inputUserData);
-        }
+        String updatetoken = (String) this.currentUserData.get(OP_UPDATETOKEN);
+        String userid = (String) this.currentUserData.get(OP_USERID);
+        inputUserData.put(OP_UPDATETOKEN, updatetoken);
+        inputUserData.put(OP_USERID, userid);
+        inputUserData = util.normalizeUserInputData(inputUserData, this.currentUserData);
+        log.info("Update user");
+        log.info("Update inputUserData: " + inputUserData);
+        html.postHttpBody(url + UPDATEUSER_URL, inputUserData);
 
     }
 
@@ -230,5 +249,63 @@ public class MantisHttpClient {
         }
         System.out.println("Total recon users: " + util.getSearchResult().size());
         return util.getSearchResult();
+    }
+    public Map<String, HashMap<String, List<String>>> reconcileSingleUserData(String userid) throws IOException {
+        Map<String, HashMap<String, List<String>>> searchResult = new HashMap<String, HashMap<String, List<String>>>();
+ 
+        this.setSearchAttribute(OP_USERID);
+        String body = html.getHttpBody(url + EDITUSER_PAGE + searchAttribute + "=" + userid);
+        String updatetoken = util.getUpdateToken(body);
+        if (updatetoken == null) {
+            log.info("User was deleted, or wrong user_id");
+            return null;
+        }
+        String username = util.getUsename(body);
+        String realname = util.getRealname(body);
+        String email = util.getEmail(body);
+        String enabled = util.getEnabled(body).toString();
+        String protectd = util.getProtected(body).toString();
+        String accesslvl = util.getAccessLevel(body);
+        
+        HashMap<String, List<String>> values = new HashMap<String, List<String>>();
+        List<String> valuesList = new ArrayList<String>();
+        
+            //userid            
+            valuesList.add(userid);
+            values.put(OP_USERID, valuesList);
+            valuesList = new ArrayList<String>();
+
+            //username
+            valuesList.add(username);
+            values.put(USERNAME, valuesList);
+            valuesList = new ArrayList<String>();
+        
+            //email            
+            valuesList.add(email);
+            values.put(EMAIL, valuesList);
+            valuesList = new ArrayList<String>();
+
+            //realname
+            valuesList.add(realname);
+            values.put(REALNAME, valuesList);
+            valuesList = new ArrayList<String>();
+
+            //enabled
+            valuesList.add(enabled);
+            values.put(ENABLED, valuesList);
+            valuesList = new ArrayList<String>();
+
+            //protected
+            valuesList.add(protectd);
+            values.put(PROTECTED, valuesList);
+            valuesList = new ArrayList<String>();
+
+            //access
+            valuesList.add(accesslvl);
+            values.put(ACCESSLEVEL, valuesList);
+            valuesList = new ArrayList<String>();
+            
+        searchResult.put(userid, values);
+        return searchResult;
     }
 }

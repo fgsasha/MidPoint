@@ -45,6 +45,7 @@ public class MantisUtil {
     final String REC_CHEKED = "X";
     final String REC_EMPTY = "&#160;";
 
+    static String USERNAME_PATERN = "(?s).*?<!-- Username -->[\\r\\n].*?\\t*?([^\\t]+)\\t*?</td>[\\r\\n]+</tr>.*?";
     static String REALNAME_PATERN = "(?s).*?<!-- Realname -->[\\r\\n].*?\\t*?([^\\t]+)\\t*?</td>[\\r\\n]+</tr>.*?";
     static String EMAIL_PATERN = "(?s).*?<!-- Email -->[\\r\\n].*?\\t*?([^\\t]+)\\t*?</td>[\\r\\n]+</tr>.*?";
     static String ENABLED_PATERN = ".*?<input type=\"checkbox\" name=\"enabled\"  checked=\"(.*?)\"  />.*?";
@@ -56,6 +57,8 @@ public class MantisUtil {
     static String CREATE_PAGETOKEN_PATERN = ".*?<input type=\"hidden\" name=\"manage_user_create_page_token\" id=\"manage_user_create_page_token\" value=\"(.*?)\"/>.*?";
     private String REALNAME_PATERN_2 = ".*?value=\\\"([^\\\"]+?)\\\" />";
     private String EMAIL_PATERN_2 = ".*?value=\\\"([^\\\"]+?)\\\" />";
+    private String USERNAME_PATERN_2 = ".*?value=\\\"([^\\\"]+?)\\\" />";
+
     private String NUMBEROFUSERS_PATERN = ".*?Manage Accounts \\[([\\d]+)\\].*?";
     private String USERATTRIBUTES_PATERN = "(?s)<a href=\\\"manage_user_edit_page.php\\?(user_id=.*?)</tr>";
 
@@ -96,6 +99,10 @@ public class MantisUtil {
                 matchedString = m2.group(1);
             }
         }
+        if (matchedString.contains("<td")) {
+            matchedString = null;
+        }
+
         log.info("getRealname:matchedString: " + matchedString);
         return matchedString;
     }
@@ -108,7 +115,6 @@ public class MantisUtil {
         if (m.find()) {
             matchedString = m.group(1);
         }
-
         if (matchedString.contains("name=\"email\"")) {
             Pattern p2 = Pattern.compile(EMAIL_PATERN_2);
             Matcher m2 = p2.matcher(matchedString);
@@ -116,9 +122,8 @@ public class MantisUtil {
                 matchedString = m2.group(1);
             }
         }
-        if (matchedString == null) {
-            log.info("getEmail:matchedString: " + matchedString);
-            return null;
+        if (matchedString.contains("<td")) {
+            matchedString = null;
         }
         log.info("getEmail:matchedString: " + matchedString);
         return matchedString;
@@ -232,6 +237,9 @@ public class MantisUtil {
         Map result = new HashMap();
         result.putAll(inputUserData);
         if (currentUserData == null) {
+            if (inputUserData.get(OP_USERID) == null || inputUserData.get(OP_USERID).toString().isEmpty()) {
+                result.remove(OP_USERID);
+            }
             if (inputUserData.get(EMAIL) == null || inputUserData.get(EMAIL).toString().isEmpty()) {
                 result.remove(EMAIL);
             }
@@ -256,7 +264,13 @@ public class MantisUtil {
                 result.remove(PROTECTED);
             }
         } else {
-
+            if (inputUserData.get(OP_USERID) == null || inputUserData.get(OP_USERID).toString().isEmpty()) {
+                if (currentUserData.get(OP_USERID) == null || currentUserData.get(OP_USERID).toString().isEmpty()) {
+                    result.remove(OP_USERID);
+                } else {
+                    result.put(OP_USERID, currentUserData.get(OP_USERID).toString());
+                }
+            }
             if (inputUserData.get(EMAIL) == null || inputUserData.get(EMAIL).toString().isEmpty()) {
                 if (currentUserData.get(EMAIL) == null || currentUserData.get(EMAIL).toString().isEmpty()) {
                     result.remove(EMAIL);
@@ -437,9 +451,9 @@ public class MantisUtil {
 
         if (joinedGroup != null && prefix != null && delimiter != null) {
             int cLvl = 0;
-            String[] gr = joinedGroup.toLowerCase().split(delimiter);            
+            String[] gr = joinedGroup.toLowerCase().split(delimiter);
             for (int i = 0; i < gr.length; i++) {
-                if (gr[i].startsWith(prefix)) {                    
+                if (gr[i].startsWith(prefix)) {
                     if (gr[i].contains(viewer)) {
                         cLvl = 10;
                     } else if (gr[i].contains(reporter)) {
@@ -466,6 +480,25 @@ public class MantisUtil {
     }
 
     String getUsename(String body) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        log.finest("getUsename body: " + body);
+        Pattern p = Pattern.compile(USERNAME_PATERN);
+        Matcher m = p.matcher(body);
+        String matchedString = null;
+        if (m.find()) {
+            matchedString = m.group(1);
+        }
+        if (matchedString == null) {
+            log.info("getUsename:matchedString: " + matchedString);
+            return null;
+        }
+        if (matchedString.contains("name=\"username\"")) {
+            Pattern p2 = Pattern.compile(USERNAME_PATERN_2);
+            Matcher m2 = p2.matcher(matchedString);
+            if (m2.find()) {
+                matchedString = m2.group(1);
+            }
+        }
+        log.info("getUsename:matchedString: " + matchedString);
+        return matchedString;
     }
 }
