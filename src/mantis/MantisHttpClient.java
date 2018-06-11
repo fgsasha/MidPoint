@@ -107,7 +107,7 @@ public class MantisHttpClient {
             this.setSearchAttribute(USERNAME);
             this.currentUserData = this.getUserData((String) inputUserData.get(USERNAME));
         } else {
-            throw new VerifyError("User " + (String) inputUserData.get(USERNAME) + " already exist. Another reason is wrong user_id for user update: "+inputUserData.get(USERNAME));
+            throw new VerifyError("User " + (String) inputUserData.get(USERNAME) + " already exist. Another reason is wrong user_id for user update: " + inputUserData.get(USERNAME));
         }
         if (this.currentUserData != null) {
             userid = (String) this.currentUserData.get(OP_USERID);
@@ -138,15 +138,15 @@ public class MantisHttpClient {
                 throw new VerifyError("Cant create user. No such user");
             }
         } else {
+            if (!userData.get(OP_USERID).toString().equalsIgnoreCase((String) currentUserData.get(OP_USERID))) {
+                    throw new VerifyError("\nInput User_Id and Username belongs to different users:\ninput: " + userData.get(OP_USERID) + " : " + userData.get(USERNAME) + "\noutput: " + userid + " : " + this.currentUserData.get(USERNAME));
+                }
             if (userShouldBeUpdated(userData)) {
                 this.updateUser(userData);
             }
             if (this.currentUserData != null) {
                 userid = (String) this.currentUserData.get(OP_USERID);
-                if(!userData.get(USERNAME).toString().equalsIgnoreCase((String) currentUserData.get(USERNAME))){
-                throw new VerifyError("\nInput User_Id and Username belongs to different users:\ninput: "+userData.get(OP_USERID)+" : "+ userData.get(USERNAME)+"\noutput: "+userid+" : "+ this.currentUserData.get(USERNAME));
-                }
-            } else {
+                } else {
                 throw new VerifyError("User doesnot exist");
             }
         }
@@ -250,9 +250,10 @@ public class MantisHttpClient {
         System.out.println("Total recon users: " + util.getSearchResult().size());
         return util.getSearchResult();
     }
+
     public Map<String, HashMap<String, List<String>>> reconcileSingleUserData(String userid) throws IOException {
         Map<String, HashMap<String, List<String>>> searchResult = new HashMap<String, HashMap<String, List<String>>>();
- 
+
         this.setSearchAttribute(OP_USERID);
         String body = html.getHttpBody(url + EDITUSER_PAGE + searchAttribute + "=" + userid);
         String updatetoken = util.getUpdateToken(body);
@@ -266,45 +267,45 @@ public class MantisHttpClient {
         String enabled = util.getEnabled(body).toString();
         String protectd = util.getProtected(body).toString();
         String accesslvl = util.getAccessLevel(body);
-        
+
         HashMap<String, List<String>> values = new HashMap<String, List<String>>();
         List<String> valuesList = new ArrayList<String>();
-        
-            //userid            
-            valuesList.add(userid);
-            values.put(OP_USERID, valuesList);
-            valuesList = new ArrayList<String>();
 
-            //username
-            valuesList.add(username);
-            values.put(USERNAME, valuesList);
-            valuesList = new ArrayList<String>();
-        
-            //email            
-            valuesList.add(email);
-            values.put(EMAIL, valuesList);
-            valuesList = new ArrayList<String>();
+        //userid            
+        valuesList.add(userid);
+        values.put(OP_USERID, valuesList);
+        valuesList = new ArrayList<String>();
 
-            //realname
-            valuesList.add(realname);
-            values.put(REALNAME, valuesList);
-            valuesList = new ArrayList<String>();
+        //username
+        valuesList.add(username);
+        values.put(USERNAME, valuesList);
+        valuesList = new ArrayList<String>();
 
-            //enabled
-            valuesList.add(enabled);
-            values.put(ENABLED, valuesList);
-            valuesList = new ArrayList<String>();
+        //email            
+        valuesList.add(email);
+        values.put(EMAIL, valuesList);
+        valuesList = new ArrayList<String>();
 
-            //protected
-            valuesList.add(protectd);
-            values.put(PROTECTED, valuesList);
-            valuesList = new ArrayList<String>();
+        //realname
+        valuesList.add(realname);
+        values.put(REALNAME, valuesList);
+        valuesList = new ArrayList<String>();
 
-            //access
-            valuesList.add(accesslvl);
-            values.put(ACCESSLEVEL, valuesList);
-            valuesList = new ArrayList<String>();
-            
+        //enabled
+        valuesList.add(enabled);
+        values.put(ENABLED, valuesList);
+        valuesList = new ArrayList<String>();
+
+        //protected
+        valuesList.add(protectd);
+        values.put(PROTECTED, valuesList);
+        valuesList = new ArrayList<String>();
+
+        //access
+        valuesList.add(accesslvl);
+        values.put(ACCESSLEVEL, valuesList);
+        valuesList = new ArrayList<String>();
+
         searchResult.put(userid, values);
         return searchResult;
     }
