@@ -14,23 +14,19 @@ import java.io.Reader;
 import java.net.CookieManager;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
-import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSession;
-import javax.xml.bind.ValidationException;
 import mantis.MantisUtil;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
 import org.json.JSONException;
 
 /**

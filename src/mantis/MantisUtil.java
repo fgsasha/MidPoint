@@ -5,11 +5,6 @@
  */
 package mantis;
 
-import hrdata.HTMLutils;
-import java.io.IOException;
-import java.net.CookieManager;
-import java.net.CookieStore;
-import java.net.HttpCookie;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,7 +13,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.net.ssl.HttpsURLConnection;
 
 /**
  *
@@ -500,5 +494,53 @@ public class MantisUtil {
         }
         log.info("getUsename:matchedString: " + matchedString);
         return matchedString;
+    }
+
+    public static String ldapGoupToAccLvlLowestPriority(String prefix, String joinedGroup, String delimiter) {
+        String acclvl = null;
+        int intAcc = 100;
+        int unknown = 0;
+        String viewer = "_viewer";
+        String reporter = "_reporter";
+        String manager = "_manager";
+        String developer = "_developer";
+        String updater = "_updater";
+        String administrator = "_administrator";
+
+        if (joinedGroup != null && prefix != null && delimiter != null) {
+
+            int cLvl = 0;
+            String[] gr = joinedGroup.toLowerCase().split(delimiter);
+            for (int i = 0; i < gr.length; i++) {
+                if (gr[i].startsWith(prefix)) {
+                    if (gr[i].contains(viewer)) {
+                        cLvl = 10;
+                    } else if (gr[i].contains(reporter)) {
+                        cLvl = 25;
+                    } else if (gr[i].contains(manager)) {
+                        cLvl = 70;
+                    } else if (gr[i].contains(developer)) {
+                        cLvl = 55;
+                    } else if (gr[i].contains(updater)) {
+                        cLvl = 40;
+                    } else if (gr[i].contains(administrator)) {
+                        cLvl = 90;
+                    } else {
+                        unknown = 5;
+                    }
+                    if (cLvl < intAcc) {
+                        intAcc = cLvl;
+                    }
+                }
+            }
+
+            if (intAcc == 100) {
+                intAcc = 0;
+            } else if (intAcc == 100 && unknown == 5) {
+                intAcc = 5;
+            }
+            acclvl = String.valueOf(intAcc);
+        }
+        return acclvl;
     }
 }
