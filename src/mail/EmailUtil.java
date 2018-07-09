@@ -4,13 +4,7 @@
  * and open the template in the editor.
  */
 package mail;
-//https://javaee.github.io/javamail/
 
-/**
- *
- * @author onekriach
- */
-import hrdata.JSONparser;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -20,11 +14,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.Properties;
-
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
-import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
@@ -35,6 +24,10 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
+/**
+ *
+ * @author onekriach
+ */
 public class EmailUtil {
 
     private String smtpHostServer = "smtp.example.com";
@@ -296,9 +289,7 @@ public class EmailUtil {
         // creates message part
         MimeBodyPart messageBodyPart = new MimeBodyPart();
         messageBodyPart.setContent(body, "text/html; charset=UTF-8");
-        
-        
-        
+
         // creates multi-part
         Multipart multipart = new MimeMultipart();
         multipart.addBodyPart(messageBodyPart);

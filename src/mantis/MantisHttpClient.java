@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.mail.MessagingException;
 
 /**
  *
@@ -56,6 +57,7 @@ public class MantisHttpClient {
     private Map currentUserData = null;
     private String url = null;
     private String searchAttribute = null;
+    private String sendEmail = "1";
 
     public void setSearchAttribute(String searchAttribute) {
         this.searchAttribute = searchAttribute;
@@ -68,6 +70,14 @@ public class MantisHttpClient {
     public void init() {
         util = new mantis.MantisUtil();
         html = new hrdata.HTMLutils();
+    }
+
+    public MantisUtil getUtil() {
+        return util;
+    }
+
+    public void setSendEmail(String sendEmail) {
+        this.sendEmail = sendEmail;
     }
 
     public boolean connect(String url, String username, String pass) throws IOException {
@@ -105,6 +115,20 @@ public class MantisHttpClient {
             this.createUser(inputUserData);
             this.setSearchAttribute(USERNAME);
             this.currentUserData = this.getUserData((String) inputUserData.get(USERNAME));
+            if (util == null) {
+                util = new MantisUtil();
+            }
+            if (sendEmail.equals("1")) {
+                if (this.currentUserData == null) {
+                    throw new VerifyError("Cant create user. Please check that input paramjeter _confirmed is set to 1");
+                }
+                try {
+                    util.SendEmailToNewUser(this.currentUserData.get(EMAIL).toString(), this.currentUserData.get(USERNAME).toString());
+                } catch (MessagingException ex) {
+                    Logger.getLogger(MantisHttpClient.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(MantisHttpClient.class.getName()).log(Level.SEVERE, null, "Sending Email exception. Cant send email no new user. Check emailConfigFile and input data");
+                }
+            }
         } else {
             throw new VerifyError("User " + (String) inputUserData.get(USERNAME) + " already exist. Another reason is wrong user_id for user update: " + inputUserData.get(USERNAME));
         }
@@ -137,16 +161,18 @@ public class MantisHttpClient {
                 throw new VerifyError("Cant create user. No such user");
             }
         } else {
-            if (!userData.get(OP_USERID).toString().equalsIgnoreCase((String) currentUserData.get(OP_USERID))) {
-                    throw new VerifyError("\nInput User_Id and Username belongs to different users:\ninput: " + userData.get(OP_USERID) + " : " + userData.get(USERNAME) + "\noutput: " + userid + " : " + this.currentUserData.get(USERNAME));
-                }
             if (userShouldBeUpdated(userData)) {
                 this.updateUser(userData);
+                this.setSearchAttribute(USERNAME);
+                this.currentUserData = getUserData((String) userData.get(USERNAME));
             }
             if (this.currentUserData != null) {
+                if (userData.get(OP_USERID) != null && !userData.get(OP_USERID).toString().equalsIgnoreCase((String) currentUserData.get(OP_USERID))) {
+                    throw new VerifyError("\nInput User_Id and Updated Username belongs to different users:\ninput: " + userData.get(OP_USERID) + " : " + userData.get(USERNAME) + "\noutput: " + userid + " : " + this.currentUserData.get(USERNAME));
+                }
                 userid = (String) this.currentUserData.get(OP_USERID);
-                } else {
-                throw new VerifyError("User doesnot exist");
+            } else {
+                throw new VerifyError("User does not exist");
             }
         }
 

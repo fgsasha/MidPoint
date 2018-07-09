@@ -5,6 +5,7 @@
  */
 package mantis;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +14,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import mail.EmailUtil;
 
 /**
  *
@@ -21,6 +25,13 @@ import java.util.regex.Pattern;
 public class MantisUtil {
 
     Logger log = Logger.getLogger(MantisUtil.class.getName());
+
+    private String templateUID = "%UID%";
+    //Email settings
+    private String emailConfigFile = null;
+    private String emailSubject = "[DYNINNO] Account registration";
+    private String emailBody = null;
+    //
 
     final String USERNAME = "username";
     final String EMAIL = "email";
@@ -65,6 +76,22 @@ public class MantisUtil {
     private String REC_ACCESS_PATERN = "(?s)[\\r\\n]+?\\t<td>[^<]+@[^<]+</td>[\\r\\n]+?\t<td>([^<]+)</td>";
     private String REC_ENABLED_PATERN = "<td class=\\\"center\\\">([^<]+)";
     private String REC_PROTECTED_PATERN = "alt=\"(Protected)\"";
+
+    public void setTemplateUID(String templateUID) {
+        this.templateUID = templateUID;
+    }
+
+    public void setEmailConfigFile(String emailConfigFile) {
+        this.emailConfigFile = emailConfigFile;
+    }
+
+    public void setEmailSubject(String emailSubject) {
+        this.emailSubject = emailSubject;
+    }
+
+    public void setEmailBody(String emailBody) {
+        this.emailBody = emailBody;
+    }
 
     public Map<String, HashMap<String, List<String>>> getSearchResult() {
         return searchResult;
@@ -542,5 +569,20 @@ public class MantisUtil {
             acclvl = String.valueOf(intAcc);
         }
         return acclvl;
+    }
+
+    void SendEmailToNewUser(String recipient, String username) throws IOException, MessagingException {
+        if (emailConfigFile == null || emailBody == null) {
+            throw new VerifyError("Configuration error: emailConfigFile or emailBody is not set");
+        }
+        EmailUtil emailUtil = new EmailUtil(emailConfigFile);
+        // Creation of new users is not offten so we can user creation mail session for every new email separetly
+        String body = null;
+        if (emailBody != null && !emailBody.isEmpty()) {
+            body = emailBody;
+            body = body.replace(templateUID, username);
+        }
+        Session session = emailUtil.Initialization();
+        emailUtil.sendEmail(session, recipient, emailSubject, body);
     }
 }
