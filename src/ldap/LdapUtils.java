@@ -7,7 +7,7 @@ package ldap;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 import java.io.File;
 import java.io.FileInputStream;

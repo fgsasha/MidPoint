@@ -33,7 +33,7 @@ import org.json.*;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 public class JiraEmployeesData {
 

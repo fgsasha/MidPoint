@@ -8,7 +8,7 @@ package hrdata;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 import java.io.File;
 import java.io.IOException;

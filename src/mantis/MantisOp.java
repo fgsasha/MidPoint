@@ -15,7 +15,7 @@ import sun.util.logging.resources.logging;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 public class MantisOp {
 

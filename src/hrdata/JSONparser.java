@@ -35,7 +35,7 @@ import java.util.zip.DataFormatException;
 
 /**
  *
- * @author onekriach 20.12.2017 EMC Api Version 11
+ * @author o.nekriach 20.12.2017 EMC Api Version 11
  */
 public class JSONparser {
 
@@ -185,7 +185,7 @@ public class JSONparser {
             // Если нужны данные только EMC или HRM то оставляем соответствующую секцию другую коментируем)
             //--------------- EMC ------------------
             //json.setSourceHRData("EMC-HRM");
-            //json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export_cut.json");
+            //json.setInputJSONFilePath("/home/o.nekriach/Downloads/work/EMC_export_cut.json");
             this.setInputJSONFilePath(this.emcJsonFile);
             this.setOutputCSVFilePath(this.emcCSVFile);
             this.EMCJsonToArray();
@@ -210,7 +210,7 @@ public class JSONparser {
 
             //--------------- EMC ------------------
             //json.setSourceHRData("EMC-HRM");
-            //json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export_cut.json");
+            //json.setInputJSONFilePath("/home/o.nekriach/Downloads/work/EMC_export_cut.json");
             this.emcFilterFieldName = this.filterFieldName;
             this.emcFilterValues = this.filterValues;
             this.setInputJSONFilePath(this.emcJsonFile);
@@ -232,7 +232,7 @@ public class JSONparser {
 
             //--------------- multiEMC ------------------
             //json.setSourceHRData("EMC-HRM");
-            //json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export_cut.json");
+            //json.setInputJSONFilePath("/home/o.nekriach/Downloads/work/EMC_export_cut.json");
             //Временно очищаем то что получили от HRM, что бы собрать HashMap из множества файлов EMC (каждая компания имеет собстевнный json вывод)  
             Map jsonMapHRM_2 = new HashMap(this.jsonMapHRM);
             this.jsonMapHRM.clear();
@@ -300,7 +300,7 @@ public class JSONparser {
 
             //--------------- multiEMC ------------------
             //json.setSourceHRData("EMC-HRM");
-            //json.setInputJSONFilePath("/home/onekriach/Downloads/work/EMC_export_cut.json");
+            //json.setInputJSONFilePath("/home/o.nekriach/Downloads/work/EMC_export_cut.json");
             //Временно очищаем то что получили от HRM, что бы собрать HashMap из множества файлов EMC (каждая компания имеет собстевнный json вывод)  
             this.jsonMapHRM.clear();
             this.jsonMapEMC.clear();

@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 public class LinuxUserStatus {
 

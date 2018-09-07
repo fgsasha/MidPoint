@@ -7,7 +7,7 @@ package hrdata;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 class cookieManager {
     

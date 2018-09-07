@@ -35,7 +35,7 @@ import mail.EmailUtil;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 public class PasswordExpirationNotification {
 

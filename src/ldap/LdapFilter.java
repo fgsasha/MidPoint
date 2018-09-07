@@ -18,7 +18,7 @@ import javax.naming.ldap.LdapContext;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 public class LdapFilter {
 

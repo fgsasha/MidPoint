@@ -26,7 +26,7 @@ import javax.mail.internet.MimeMultipart;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 public class EmailUtil {
 

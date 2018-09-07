@@ -20,7 +20,7 @@ import javax.mail.MessagingException;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 public class MantisHttpClient {
 

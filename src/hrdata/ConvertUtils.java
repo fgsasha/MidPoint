@@ -9,7 +9,7 @@ import org.apache.commons.lang.StringUtils;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 //http://www.unitconversion.org/numbers/base-10-to-base-36-conversion.html
 //You can find useful link how to convert to base36 in different languages https://en.wikipedia.org/wiki/Base36

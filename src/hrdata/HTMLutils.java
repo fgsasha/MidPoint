@@ -31,7 +31,7 @@ import org.json.JSONException;
 
 /**
  *
- * @author onekriach
+ * @author o.nekriach
  */
 public class HTMLutils {
 
