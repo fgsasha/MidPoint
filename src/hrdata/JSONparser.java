@@ -684,7 +684,7 @@ public class JSONparser {
         //System.out.println(csvKeysString);
 
         //делаем подмену ключевых полей на те, что уже использовались в idm
-        csvKeysString = csvKeysString.replace("isActive", "isActiveEMC").replace("location", "locationEMC");
+        csvKeysString = csvKeysString.replace("isActive", "isActiveEMC").replace("location", "locationEMC").replace("companySettings", "companies");
 
         if (this.wholeFile) {
             returnArray = new String[ks.length + 1];
@@ -721,7 +721,11 @@ public class JSONparser {
 
             // Если нужны все пользователи то тогда есть смысл внести изменения Есть ли у пользователей логины и активны ли они 
             // TODO В условие нужно будет добавить проверку признача что что логин основной
+            
+                                       //MAIN script//
+            
             if (obj2.isNull("login") == false && (obj2.get("isActive").equals("1") || !emcIsActiveOnly) && checkIfLoginsPrimary(obj2.get("login")) && checkIfNotExcludeLogin(obj2.get("login"))) {
+                String emailDef = "";
                 String csvStringValues = "";
                 if (obj2.isNull("hrmId") == false) {
                     hrmId = obj2.get("hrmId").toString();
@@ -730,7 +734,6 @@ public class JSONparser {
                 }
 
                 for (int p = 0; p < keys.length; p++) {
-
                     String toAdd = "";
 
                     if (obj2.isNull(keys[p].toString()) == false) {
@@ -743,13 +746,19 @@ public class JSONparser {
                         }
 
                         if (keys[p].equalsIgnoreCase("emails")) {
-                            String mainEmail = getMainEmail(toAdd);
-                            //Замена исходного значения "emails" 
-                            toAdd = mainEmail;
+                            // this.defaultEmail = getMainEmail(toAdd);
+                            emailDef = getMainEmail(toAdd);
+                            //Вычисление значения для "emailDef"
+                        }
+
+                        if (keys[p].equalsIgnoreCase("emails")) {
+                            //String mainEmail = getMainEmail(toAdd);
+                            String emails = getEmailsList(toAdd);
+                            toAdd = emails;
 
                         }
 
-                        if (keys[p].equalsIgnoreCase("companies")) {
+                        if (keys[p].equalsIgnoreCase("companies") || keys[p].equalsIgnoreCase("companySettings")) {
                             String companies = getCompanies(toAdd);
                             //Замена исходного значения "companies" 
                             toAdd = companies;
@@ -790,6 +799,11 @@ public class JSONparser {
                             toAdd = "";
 
                         }
+                        
+                        if (keys[p].equalsIgnoreCase("name")) {
+                            //Убираем delimiter из имени
+                            toAdd = toAdd.replaceAll(this.delimiter, "");
+                        }
 
                         if (toAdd.contains(this.delimiter)) {
                             toAdd = toAdd.replaceAll(this.delimiter, replaceSymbol);
@@ -813,16 +827,37 @@ public class JSONparser {
                             csvStringValues = csvStringValues + this.delimiter;
                         } else //TODO
                         //Добавляем в конец, доролнительные данные
-                         if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")) {
+                            if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companies")){
+                                //    if (emcApiVersion != null && emcApiVersion.equalsIgnoreCase("V10")) {
+                                //Добавляем значение для emails вычисляемое из companies
+                                String inputDataEmail = getEmailsJSONfromCompanies(obj2.get("companies").toString());
+                                String emailList = getEmailsList(inputDataEmail);
+                                csvStringValues = csvStringValues + this.delimiter + emailList;
+                                //Добавляем пустое значение для locationId
+                                csvStringValues = csvStringValues + this.delimiter + "";
+                                //Вычисляем и вставляем defaulEmail
                                 String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
                                 String mainEmail = getMainEmail(inputData);
                                 csvStringValues = csvStringValues + this.delimiter + mainEmail;
+                            } 
+                        //Добавляем в конец, доролнительные данные
+                           else if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companySettings")) {
+                                //    if (emcApiVersion != null && emcApiVersion.equalsIgnoreCase("V10")) {
+                                //Добавляем значение для emails вычисляемое из companies
+                                String inputDataEmail = getEmailsJSONfromCompanies(obj2.get("companySettings").toString());
+                                String emailList = getEmailsList(inputDataEmail);
+                                csvStringValues = csvStringValues + this.delimiter + emailList;
                                 //Добавляем пустое значение для locationId
                                 csvStringValues = csvStringValues + this.delimiter + "";
-
+                                //Вычисляем и вставляем defaulEmail
+                                String inputData = getEmailsJSONfromCompanies(obj2.get("companySettings").toString());
+                                String mainEmail = getMainEmail(inputData);
+                                csvStringValues = csvStringValues + this.delimiter + mainEmail;
+                            } else {
+                                //add defaultEmail as last value in csv
+                                csvStringValues = csvStringValues + this.delimiter + emailDef;//this.defaultEmail;
                             }
                     }
-
                 }
 
                 //добавляем в хеш мап не пустые csv строки и ключ hrmid(pid)
@@ -865,7 +900,11 @@ public class JSONparser {
 
         // Для совместимости кода в завимости от версии EMC API и для V9 и для V10 , добавляем в 0 позицию хеш мап дополнительные поля в csvKeysString  
         if (emcApiVersion != null && emcApiVersion.equalsIgnoreCase("V10")) {
-            csvKeysString = csvKeysString + this.delimiter + "emails,locationId";
+            csvKeysString = csvKeysString + this.delimiter + "emails,locationId,defaultEmail";
+            returnArray[0] = csvKeysString;
+            hmap.replace("csvFieldNames", csvKeysString);
+        } else {
+            csvKeysString = csvKeysString + this.delimiter + "defaultEmail";
             returnArray[0] = csvKeysString;
             hmap.replace("csvFieldNames", csvKeysString);
         }
@@ -949,12 +988,12 @@ public class JSONparser {
         return companies;
     }
 
-    private String getMainEmail(String toAdd) {
+    private String getMainEmail(String input) {
         //System.out.println("getMainEmail"+toAdd);
         String mainEmailStr = "";
-        if (toAdd.length() > 2) {
-            toAdd = toAdd.replace(this.replaceSymbol, this.delimiter);
-            JSONObject obj = new JSONObject(toAdd);
+        if (input.length() > 2) {
+            input = input.replace(this.replaceSymbol, this.delimiter);
+            JSONObject obj = new JSONObject(input);
             Map mainEmail = new HashMap<String, Integer>();
 
             String keySetIternextValue = "";
@@ -964,7 +1003,63 @@ public class JSONparser {
             while (keySetIter.hasNext()) {
 
                 keySetIternextValue = keySetIter.next();
-                if (obj.optString(keySetIternextValue) != null && !obj.optString(keySetIternextValue).equalsIgnoreCase("null")) {
+                if (!obj.optString(keySetIternextValue).isEmpty() && !obj.optString(keySetIternextValue).equalsIgnoreCase("null")) {
+
+                    keys[k] = obj.get(keySetIternextValue.toString()).toString();
+                    if (mainEmail.containsKey(obj.get(keySetIternextValue.toString()))) {
+
+                        int value = (int) mainEmail.get(obj.get(keySetIternextValue.toString()));
+                        mainEmail.replace(obj.get(keySetIternextValue.toString()), value + 1);
+
+                    } else {
+                        mainEmail.put(obj.get(keySetIternextValue.toString()), 1);
+                    }
+                }
+
+                k = k + 1;
+            }
+
+            if (!mainEmail.isEmpty()) {
+//            System.out.println("\nNumberofEmails=" + mainEmail.size());
+//            System.out.println(": keysLength=" + keys.length);
+                outerloop:
+                for (int i = keys.length; i > 0; i--) {
+
+                    Set<Map.Entry> entries = mainEmail.entrySet();
+                    for (Map.Entry entry : entries) {
+                        if (Integer.parseInt(entry.getValue().toString()) == i) {
+                            mainEmailStr = entry.getKey().toString();
+                            break outerloop;
+                        }
+
+                    }
+                }
+
+            }
+        }
+//        System.out.println("Result: "+mainEmailStr);
+        if (mainEmailStr != null && !mainEmailStr.isEmpty()) {
+            mainEmailStr = mainEmailStr.toLowerCase();
+        }
+        return mainEmailStr;
+    }
+
+    private String getEmailsList(String input) {
+        //System.out.println("getMainEmail"+toAdd);
+        String emails = "";
+        if (input.length() > 2) {
+            input = input.replace(this.replaceSymbol, this.delimiter);
+            JSONObject obj = new JSONObject(input);
+            Map mainEmail = new HashMap<String, Integer>();
+
+            String keySetIternextValue = "";
+            Iterator<String> keySetIter = obj.keys();
+            String[] keys = new String[obj.keySet().size()];
+            int k = 0;
+            while (keySetIter.hasNext()) {
+
+                keySetIternextValue = keySetIter.next();
+                if (!obj.optString(keySetIternextValue).isEmpty() && !obj.optString(keySetIternextValue).equalsIgnoreCase("null")) {
 
                     keys[k] = obj.get(keySetIternextValue.toString()).toString();
                     if (mainEmail.containsKey(obj.get(keySetIternextValue.toString()))) {
@@ -984,24 +1079,26 @@ public class JSONparser {
             if (!mainEmail.isEmpty()) {
 //            System.out.println("\nNumberofEmails=" + mainEmail.size());
 //            System.out.println(": keysLength=" + keys.length);
-
-                for (int i = keys.length; i > 0; i--) {
-
-                    if (mainEmail.containsValue(i)) {
-//                    System.out.println(mainEmail.toString());
-//                    System.out.println("Value=" + i);
-//                    System.out.println("MainEmail: "+keys[i-1]);
-                        mainEmailStr = keys[i - 1];
-                        break;
-
+                Set keySet = mainEmail.keySet();
+                Iterator it = keySet.iterator();
+                while (it.hasNext()) {
+                    String email = it.next().toString();
+                    if (email != null && !email.equalsIgnoreCase("null")) {
+                        if (emails.isEmpty()) {
+                            emails = email;
+                        } else {
+                            emails = emails + this.replaceSymbol + email;
+                        }
                     }
 
                 }
-
             }
         }
         //System.out.println("Result: "+mainEmailStr);
-        return mainEmailStr.toLowerCase();
+        if (emails != null && !emails.isEmpty()) {
+            emails = emails.toLowerCase();
+        }
+        return emails;
     }
 
     private String getEmailsJSONfromCompanies(String input) {
