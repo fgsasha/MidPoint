@@ -51,7 +51,7 @@ public class JiraEmployeesData {
     private static String excludedHREMID;
     private static String botname;
     private static String hremProjectName = "HREM";
-    private static String disctProjectName = "HROS";
+    private static String disctProjectName = "DICT";
     private static String searchStringAllHREM = "project=" + hremProjectName;
     private static String searchStringAllDictionary = "project=" + disctProjectName;
     //see https://jira.dyninno.net/rest/api/2/field
