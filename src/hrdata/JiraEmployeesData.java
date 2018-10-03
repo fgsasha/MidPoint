@@ -22,6 +22,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import mantis.MantisUtil;
 
 import net.rcarz.jiraclient.BasicCredentials;
 import net.rcarz.jiraclient.Issue;
@@ -35,21 +38,31 @@ import org.json.*;
  *
  * @author o.nekriach
  */
-public class JiraEmployeesData {
+public class JiraEmployeesData {    
 
     private final JiraClient ctx;
     private final BasicCredentials creds;
     private String file = "";
     private Map fMap = new HashMap();
     private Map valuesMap = new HashMap();
+    private Map<String, Map<String, String>> allDict;
     static String delimiter = ",";
     private static String primaryHREMID;
     private static String excludedHREMID;
     private static String botname;
-    private static String searchString = "project=HREM";
+    private static String hremProjectName = "HREM";
+    private static String disctProjectName = "HROS";
+    private static String searchStringAllHREM = "project=" + hremProjectName;
+    private static String searchStringAllDictionary = "project=" + disctProjectName;
     //see https://jira.dyninno.net/rest/api/2/field
     private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID,Transliteration,Level 1,Level 2,Level 3,Level 4,Level 5,Level 6,Level 7,Level 8,Level 9,Type";
     private static String excludedSummaryFieldValue = "test";
+    private static String objectFieldName = "Summary";
+    private String excludedDictionaryFields;
+    Logger log = Logger.getLogger(MantisUtil.class.getName());
+    private JiraEmployeesCodeConstant cont;
+    private static String jiraPropertiesFile="jira.properties";
+    private static String codeConstantFilePath = "jira.constants";
 
     /**
      *
@@ -62,17 +75,29 @@ public class JiraEmployeesData {
         ctx = new JiraClient(jiraURL, creds);
         file = fileName;
 
+       // log.setLevel(Level.INFO);
     }
 
-    public void run() throws JiraException, RestException, IOException, URISyntaxException, ParseException {
+    public void run() throws JiraException, RestException, IOException, URISyntaxException, ParseException, Exception {
 
         // display time and date using toString()
         System.out.println("Started at: " + new Date().toString());
 
+        // Init Fields ID Constant mapping Class from File
+        cont = new JiraEmployeesCodeConstant();
+        cont.setFileName(codeConstantFilePath);
+
+        //Get all Fields (Jira fields schema) 
         String fieldList = this.getFieldsList();
+        // Get all Dictionary Values by objectFieldName
+        allDict = this.getAllDictionaryValues();
+
+        // Get all Employees
         ArrayList allEmp = this.getAllEmployees();
+        // Get only Unique Employees
         allEmp = this.getUniqueEmployees(allEmp);
 
+        // Get all detailed empoyees records
         valuesMap.put("fieldList", fieldList);
 
         for (int k = 0; k < allEmp.size(); k++) {
@@ -99,7 +124,7 @@ public class JiraEmployeesData {
         ArrayList all = new ArrayList();
 
 //            /* Search for issues */
-        Issue.SearchResult sr = ctx.searchIssues(searchString);
+        Issue.SearchResult sr = ctx.searchIssues(searchStringAllHREM);
         System.out.println("Total records: " + sr.total);
         Iterator<Issue> it = sr.iterator();
         while (it.hasNext()) {
@@ -119,7 +144,7 @@ public class JiraEmployeesData {
         ArrayList all = new ArrayList();
 
         ///* Search for issues  - only active employees/
-        Issue.SearchResult sr = ctx.searchIssues(searchString + " and Status!=Dismissed");
+        Issue.SearchResult sr = ctx.searchIssues(searchStringAllHREM + " and Status!=Dismissed");
         System.out.println("Total: " + sr.total);
         Iterator<Issue> it = sr.iterator();
         while (it.hasNext()) {
@@ -135,7 +160,7 @@ public class JiraEmployeesData {
         ArrayList all = new ArrayList();
 
         ///* Search for issues - only dismissed employees/
-        Issue.SearchResult sr = ctx.searchIssues(searchString + " and Status=Dismissed");
+        Issue.SearchResult sr = ctx.searchIssues(searchStringAllHREM + " and Status=Dismissed");
         System.out.println("Total: " + sr.total);
         Iterator<Issue> it = sr.iterator();
         while (it.hasNext()) {
@@ -147,7 +172,7 @@ public class JiraEmployeesData {
         return all;
     }
 
-    public ArrayList getUniqueEmployees(ArrayList allemp) throws RestException, IOException, URISyntaxException, ParseException {
+    public ArrayList getUniqueEmployees(ArrayList allemp) throws RestException, IOException, URISyntaxException, ParseException, Exception {
         ArrayList output = new ArrayList();
         Map mapL1 = new HashMap();
 
@@ -155,12 +180,12 @@ public class JiraEmployeesData {
         for (int k = 0; k < allemp.size(); k++) {
             Issue issue = (Issue) allemp.get(k);
             // group employees by their ID Code and get their status
-            idCode = this.getFieldValue("ID Code", issue);
+            idCode = this.getHREMFieldValue("ID Code", issue);
             String status = "";
-            if (this.getFieldValue("Status", issue).equalsIgnoreCase("Dismissed")) {
-                status = this.getFieldValue("Dismissal", issue);
+            if (this.getHREMFieldValue("Status", issue).equalsIgnoreCase("Dismissed")) {
+                status = this.getHREMFieldValue("Dismissal", issue);
             } else {
-                //status= this.getFieldValue("Status", issue);
+                //status= this.getHREMFieldValue("Status", issue);
                 status = "Employed"; // for easiest searching
             }
 
@@ -215,7 +240,7 @@ public class JiraEmployeesData {
         return this.fieldList;
     }
 
-    public String getFieldValue(String name, Issue issue) throws RestException, IOException, URISyntaxException {
+    public String getHREMFieldValue(String name, Issue issue) throws RestException, IOException, URISyntaxException, Exception {
         String output = "";
 
         if (name.equalsIgnoreCase("Issue key")) {
@@ -249,7 +274,7 @@ public class JiraEmployeesData {
             if (output.isEmpty() || output.equals("null")) {
                 output = issue.getField(getFieldKeyByName(name).toString()).toString();
             }
-            output=output.toLowerCase();
+            output = output.toLowerCase();
             if (output != null && !output.contains("@")) {
                 output = "";
             }
@@ -264,23 +289,49 @@ public class JiraEmployeesData {
             }
         } else if (!(this.getFieldKeyByName(name) == null || this.getFieldKeyByName(name).isEmpty())) {
 
-            //System.out.println(name+" : "+this.getFieldKeyByName(name));
+            log.fine(name + " : " + this.getFieldKeyByName(name));
             if (issue.getField(getFieldKeyByName(name).toString()) != null) {
                 output = issue.getField(getFieldKeyByName(name).toString()).toString();
+                log.fine("output:" + output);
                 if (output.contains("/rest/api/2/customFieldOption")) {
                     output = new JSONObject(output).getString("value").toString();
-                }
-                if (output.contains("/rest/api/2/user?username")) {
+                } else if (output.contains("/rest/api/2/user?username")) {
                     output = new JSONObject(output).getString("name").toString();
+                } else if (output != null && output.startsWith(disctProjectName)) {
+                    log.fine("output:" + output);
+                    output = allDict.get(output).get(objectFieldName);
+                    if (output == null) {
+                        output = "null";
+                    }
                 }
+            }
+        }
+        log.fine(issue + " : " + name + " : " + output);
+        output = output.replace(delimiter, "").replace("null", "").replace("?", "");
+        return output;
+    }
+
+    public String getFieldValue(String name, Issue issue) throws IOException, URISyntaxException, Exception {
+        String output = "";
+        if (!(this.getFieldKeyByName(name) == null || this.getFieldKeyByName(name).isEmpty())) {
+            if (issue.getField(getFieldKeyByName(name).toString()) != null) {
+                output = issue.getField(getFieldKeyByName(name.toLowerCase()).toString()).toString();
+                //output = new JSONObject(output).getString("value").toString();                
             }
         }
         output = output.replace(delimiter, "").replace("null", "").replace("?", "");
         return output;
     }
 
-    public String getFieldKeyByName(String name) throws RestException, IOException, URISyntaxException {
+    public String getFieldKeyByName(String name) throws RestException, IOException, URISyntaxException, Exception {
         String output = "";
+        output = cont.getIDbyDisplayNameFromFile(name);
+        if (output == null) {
+            output = "";
+        } else {
+            return "customfield_" + output;
+        }
+
         if (fMap.containsKey(name)) {
             output = (String) fMap.get(name);
         } else {
@@ -301,15 +352,15 @@ public class JiraEmployeesData {
         return output;
     }
 
-    public String getOneEmployeeRecord(Issue issue, String fieldList) throws RestException, IOException, URISyntaxException {
+    public String getOneEmployeeRecord(Issue issue, String fieldList) throws RestException, IOException, URISyntaxException, Exception {
         String output = "";
         for (int i = 0; i < fieldList.split(delimiter).length; i++) {
-            //System.out.println(fieldList.split(",")[i] + "=" + this.getFieldValue(fieldList.split(",")[i], issue));
+            //System.out.println(fieldList.split(",")[i] + "=" + this.getHREMFieldValue(fieldList.split(",")[i], issue));
 
             if (i < fieldList.split(delimiter).length - 1) {
-                output = output + this.getFieldValue(fieldList.split(delimiter)[i], issue) + delimiter;
+                output = output + this.getHREMFieldValue(fieldList.split(delimiter)[i], issue) + delimiter;
             } else {
-                output = output + this.getFieldValue(fieldList.split(delimiter)[i], issue);
+                output = output + this.getHREMFieldValue(fieldList.split(delimiter)[i], issue);
             }
 
         }
@@ -340,7 +391,6 @@ public class JiraEmployeesData {
         String output = "";
         Date outputDate = null;
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         Iterator iter = values.iterator();
         //2017-11-10
         while (iter.hasNext()) {
@@ -405,7 +455,7 @@ public class JiraEmployeesData {
         return result;
     }
 
-    public static void main(String[] args) throws JiraException, FileNotFoundException, IOException, RestException, URISyntaxException, ParseException {
+    public static void main(String[] args) throws JiraException, FileNotFoundException, IOException, RestException, URISyntaxException, ParseException, Exception {
         System.out.println("----------------------------------------------------------------");
         String inputParameter = null;
         try {
@@ -419,7 +469,7 @@ public class JiraEmployeesData {
 
         Properties prop = new Properties();
         InputStream input = null;
-        input = new FileInputStream("jira.properties");
+        input = new FileInputStream(jiraPropertiesFile);
 
         // load a properties file
         prop.load(input);
@@ -451,8 +501,40 @@ public class JiraEmployeesData {
 
         JiraEmployeesData jira = new JiraEmployeesData(jiraURL, secret, fileName);
         jira.run();
+        input.close();
         jira.close();
 
+    }
+
+    private Map<String, Map<String, String>> getAllDictionaryValues() throws JiraException, IOException, URISyntaxException, RestException, Exception {
+        Map<String, Map<String, String>> returnHashMap = new HashMap<String, Map<String, String>>();
+        ArrayList all = new ArrayList();
+
+        /* Search for issues */
+        Issue.SearchResult sr = ctx.searchIssues(searchStringAllDictionary);
+        System.out.println("Total dictionary records: " + sr.total);
+        Iterator<Issue> it = sr.iterator();
+        while (it.hasNext()) {
+            Issue issueSR = it.next();
+            if (!issueSR.getSummary().split(" ")[0].equalsIgnoreCase(excludedDictionaryFields) || issueSR.getSummary().split(" ").length > 1) {
+                all.add(issueSR);
+//            System.out.println("issueSR: " + issueSR.getKey() + " : "
+//                    + issueSR.getSummary());
+            }
+        }
+
+        for (int k = 0; k < all.size(); k++) {
+            Issue issue = (Issue) all.get(k);
+            if (!this.checkInList(issue.getKey(), excludedHREMID, delimiter)) {
+                Map<String, String> innerHash = new HashMap<String, String>();
+                String data = new String(this.getFieldValue(objectFieldName, issue));
+                innerHash.put(objectFieldName, data);
+                returnHashMap.put(issue.getKey(), innerHash);
+            }
+
+        }
+
+        return returnHashMap;
     }
 
 }
