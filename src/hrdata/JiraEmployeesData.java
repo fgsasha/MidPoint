@@ -22,10 +22,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.mail.MessagingException;
 import mantis.MantisUtil;
-
 import net.rcarz.jiraclient.BasicCredentials;
 import net.rcarz.jiraclient.Issue;
 import net.rcarz.jiraclient.JiraClient;
@@ -38,32 +37,92 @@ import org.json.*;
  *
  * @author o.nekriach
  */
-public class JiraEmployeesData {    
+public class JiraEmployeesData {
 
-    private final JiraClient ctx;
+    private static String etalonFields;
+    private static String etalonEmployees;
+    private static String etalonValuesFile;
+    private static JiraEmployeesData jira;
+    private static Properties prop;
+    private static String adminEmail;
+    private static String smtpHostServer;
+    private static String fromAddress;
+    private static String mailDebug;
+    private static String port;
+    private static String fileName;
+
+    final JiraClient ctx;
     private final BasicCredentials creds;
     private String file = "";
     private Map fMap = new HashMap();
     private Map valuesMap = new HashMap();
     private Map<String, Map<String, String>> allDict;
-    static String delimiter = ",";
+
+    final String DELIMITER = ",";
+    static final String JIRAPROPERTIESFILE = "jira.properties";
+    static final String CODECONSTANTFILEPATH = "jira.constants";
+    private static final String HREMPROJECTNAME = "HREM";
+    private static final String DISCTPROJECTNAME = "DICT";
+    private static final String OBJECTFIELDNAME = "Summary";
+
     private static String primaryHREMID;
-    private static String excludedHREMID;
+    static String excludedHREMID;
     private static String botname;
-    private static String hremProjectName = "HREM";
-    private static String disctProjectName = "DICT";
-    private static String searchStringAllHREM = "project=" + hremProjectName;
-    private static String searchStringAllDictionary = "project=" + disctProjectName;
+    private static String searchStringAllHREM = "project=" + HREMPROJECTNAME;
+    private static String searchStringAllDictionary = "project=" + DISCTPROJECTNAME;
     //see https://jira.dyninno.net/rest/api/2/field
     private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID,Transliteration,Level 1,Level 2,Level 3,Level 4,Level 5,Level 6,Level 7,Level 8,Level 9,Type";
     private static String excludedSummaryFieldValue = "test";
-    private static String objectFieldName = "Summary";
     private String excludedDictionaryFields;
     Logger log = Logger.getLogger(MantisUtil.class.getName());
     private JiraEmployeesCodeConstant cont;
-    private static String jiraPropertiesFile="jira.properties";
-    private static String codeConstantFilePath = "jira.constants";
+    private JiraEmployeesEvaluationTest test;
 
+    public String getEtalonFields() {
+        return etalonFields;
+    }
+
+    public String getEtalonEmployees() {
+        return etalonEmployees;
+    }
+
+    public Properties getProp() {
+        return prop;
+    }
+
+    public static String getAdminEmail() {
+        return adminEmail;
+    }
+
+    public String getSmtpHostServer() {
+        return this.smtpHostServer;
+    }
+
+    public String getPort() {
+        return this.port;
+    }
+
+    public String getMailDebug() {
+        return this.mailDebug;
+    }
+
+    public String getFromAddress() {
+        return this.fromAddress;
+    }
+    
+    public static void setFieldList(String fieldList) {
+        JiraEmployeesData.fieldList = fieldList;
+    }
+
+    public String getFieldsList() {
+        return this.fieldList;
+    }
+
+    public static String getFileName() {
+        return fileName;
+    }
+    
+    
     /**
      *
      * @param jiraURL the value of jira URL like https://atlassian.net
@@ -74,8 +133,7 @@ public class JiraEmployeesData {
         creds = new BasicCredentials(botname, secret);
         ctx = new JiraClient(jiraURL, creds);
         file = fileName;
-
-       // log.setLevel(Level.INFO);
+        // log.setLevel(Level.INFO);
     }
 
     public void run() throws JiraException, RestException, IOException, URISyntaxException, ParseException, Exception {
@@ -85,12 +143,15 @@ public class JiraEmployeesData {
 
         // Init Fields ID Constant mapping Class from File
         cont = new JiraEmployeesCodeConstant();
-        cont.setFileName(codeConstantFilePath);
+        cont.setFileName(CODECONSTANTFILEPATH);
 
         //Get all Fields (Jira fields schema) 
         String fieldList = this.getFieldsList();
-        // Get all Dictionary Values by objectFieldName
+        // Get all Dictionary Values by OBJECTFIELDNAME
         allDict = this.getAllDictionaryValues();
+
+        // Validate Jira Data through Etalon data
+        jira.validate();
 
         // Get all Employees
         ArrayList allEmp = this.getAllEmployees();
@@ -102,7 +163,7 @@ public class JiraEmployeesData {
 
         for (int k = 0; k < allEmp.size(); k++) {
             Issue issue = (Issue) allEmp.get(k);
-            if (!this.checkInList(issue.getKey(), excludedHREMID, delimiter)) {
+            if (!this.checkInList(issue.getKey(), excludedHREMID, DELIMITER)) {
                 valuesMap.put(issue.getKey(), this.getOneEmployeeRecord(issue, fieldList));
             }
         }
@@ -119,7 +180,14 @@ public class JiraEmployeesData {
         creds.logout(ctx.getRestClient());
     }
 
-    public ArrayList getAllEmployees() throws JiraException {
+    /**
+     *
+     * @return
+     * @throws JiraException
+     * @throws MessagingException
+     * @throws UnsupportedEncodingException
+     */
+    public ArrayList getAllEmployees() throws JiraException, MessagingException, UnsupportedEncodingException {
 
         ArrayList all = new ArrayList();
 
@@ -130,6 +198,7 @@ public class JiraEmployeesData {
         while (it.hasNext()) {
             Issue issueSR = it.next();
             if (!issueSR.getSummary().split(" ")[0].equalsIgnoreCase(excludedSummaryFieldValue) || issueSR.getSummary().split(" ").length > 1) {
+                test.validateEmployeeStatus(issueSR.getStatus().getName());
                 all.add(issueSR);
 //            System.out.println("issueSR: " + issueSR.getKey() + " : "
 //                    + issueSR.getSummary());
@@ -140,6 +209,11 @@ public class JiraEmployeesData {
 
     }
 
+    /**
+     *
+     * @return
+     * @throws JiraException
+     */
     public ArrayList getActiveEmployees() throws JiraException {
         ArrayList all = new ArrayList();
 
@@ -156,6 +230,32 @@ public class JiraEmployeesData {
         return all;
     }
 
+    /**
+     *
+     * @return
+     * @throws JiraException
+     */
+    public ArrayList getOneEmployee() throws JiraException {
+        ArrayList all = new ArrayList();
+
+        ///* Search for issues  - only active employees/
+        Issue.SearchResult sr = ctx.searchIssues(searchStringAllHREM + " and Status!=Dismissed");
+        System.out.println("Total: " + sr.total);
+        Iterator<Issue> it = sr.iterator();
+        while (it.hasNext()) {
+            Issue issueSR = it.next();
+            all.add(issueSR);
+            System.out.println("issueSR: " + issueSR.getKey() + " : "
+                    + issueSR.getSummary());
+        }
+        return all;
+    }
+
+    /**
+     *
+     * @return
+     * @throws JiraException
+     */
     public ArrayList getFiredEmployees() throws JiraException {
         ArrayList all = new ArrayList();
 
@@ -172,6 +272,16 @@ public class JiraEmployeesData {
         return all;
     }
 
+    /**
+     *
+     * @param allemp
+     * @return
+     * @throws RestException
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws ParseException
+     * @throws Exception
+     */
     public ArrayList getUniqueEmployees(ArrayList allemp) throws RestException, IOException, URISyntaxException, ParseException, Exception {
         ArrayList output = new ArrayList();
         Map mapL1 = new HashMap();
@@ -236,14 +346,21 @@ public class JiraEmployeesData {
 
     }
 
-    public String getFieldsList() {
-        return this.fieldList;
-    }
-
+    /**
+     *
+     * @param name
+     * @param issue
+     * @return
+     * @throws RestException
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws Exception
+     */
     public String getHREMFieldValue(String name, Issue issue) throws RestException, IOException, URISyntaxException, Exception {
         String output = "";
-
-        if (name.equalsIgnoreCase("Issue key")) {
+        if (name.equalsIgnoreCase("Summary")) {
+            output = issue.getSummary();
+        } else if (name.equalsIgnoreCase("Issue key")) {
             output = issue.getKey();
         } else if (name.equalsIgnoreCase("Issue id")) {
             output = issue.getId();
@@ -251,17 +368,10 @@ public class JiraEmployeesData {
             output = issue.getIssueType().toString();
         } else if (name.equalsIgnoreCase("Status")) {
             output = issue.getStatus().toString();
+            if(output.equalsIgnoreCase("Employed")){
+            test.validateDismissalDate(issue);
+            }
         } else if (name.equalsIgnoreCase("Business Email")) {
-            //            output = issue.getField(getFieldKeyByName(name).toString()).toString();
-            //            if (output != null && !output.contains("@")) {
-            //                output = "";
-            //            }
-            //            if (output.isEmpty() || output.equals("null")) {
-            //                output = issue.getField(getFieldKeyByName("Employee").toString()).toString();
-            //                if (output.contains("/rest/api/2/user?username")) {
-            //                    output = new JSONObject(output).getString("emailAddress").toString();
-            //                }
-            // To change primary business email from Business email to User profile email
             output = issue.getField(getFieldKeyByName("Employee").toString()).toString();
             if (output.contains("/rest/api/2/user?username")) {
                 output = new JSONObject(output).getString("emailAddress").toString();
@@ -286,7 +396,7 @@ public class JiraEmployeesData {
                 output = cu.getHrIdNumberRev(personId, salt);
             } else {
                 output = "null";
-            }
+            }            
         } else if (!(this.getFieldKeyByName(name) == null || this.getFieldKeyByName(name).isEmpty())) {
 
             log.fine(name + " : " + this.getFieldKeyByName(name));
@@ -297,9 +407,9 @@ public class JiraEmployeesData {
                     output = new JSONObject(output).getString("value").toString();
                 } else if (output.contains("/rest/api/2/user?username")) {
                     output = new JSONObject(output).getString("name").toString();
-                } else if (output != null && output.startsWith(disctProjectName)) {
+                } else if (output != null && output.startsWith(DISCTPROJECTNAME)) {
                     log.fine("output:" + output);
-                    output = allDict.get(output).get(objectFieldName);
+                    output = allDict.get(output).get(OBJECTFIELDNAME);
                     if (output == null) {
                         output = "null";
                     }
@@ -307,10 +417,19 @@ public class JiraEmployeesData {
             }
         }
         log.fine(issue + " : " + name + " : " + output);
-        output = output.replace(delimiter, "").replace("null", "").replace("?", "");
+        output = output.replace(DELIMITER, "").replace("null", "").replace("?", "").trim();
         return output;
     }
 
+    /**
+     *
+     * @param name
+     * @param issue
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws Exception
+     */
     public String getFieldValue(String name, Issue issue) throws IOException, URISyntaxException, Exception {
         String output = "";
         if (!(this.getFieldKeyByName(name) == null || this.getFieldKeyByName(name).isEmpty())) {
@@ -319,10 +438,19 @@ public class JiraEmployeesData {
                 //output = new JSONObject(output).getString("value").toString();                
             }
         }
-        output = output.replace(delimiter, "").replace("null", "").replace("?", "");
+        output = output.replace(DELIMITER, "").replace("null", "").replace("?", "");
         return output;
     }
 
+    /**
+     *
+     * @param name
+     * @return
+     * @throws RestException
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws Exception
+     */
     public String getFieldKeyByName(String name) throws RestException, IOException, URISyntaxException, Exception {
         String output = "";
         output = cont.getIDbyDisplayNameFromFile(name);
@@ -352,15 +480,27 @@ public class JiraEmployeesData {
         return output;
     }
 
+    // CSV data type
+
+    /**
+     *
+     * @param issue
+     * @param fieldList
+     * @return
+     * @throws RestException
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws Exception
+     */
     public String getOneEmployeeRecord(Issue issue, String fieldList) throws RestException, IOException, URISyntaxException, Exception {
         String output = "";
-        for (int i = 0; i < fieldList.split(delimiter).length; i++) {
+        for (int i = 0; i < fieldList.split(DELIMITER).length; i++) {
             //System.out.println(fieldList.split(",")[i] + "=" + this.getHREMFieldValue(fieldList.split(",")[i], issue));
 
-            if (i < fieldList.split(delimiter).length - 1) {
-                output = output + this.getHREMFieldValue(fieldList.split(delimiter)[i], issue) + delimiter;
+            if (i < fieldList.split(DELIMITER).length - 1) {
+                output = output + this.getHREMFieldValue(fieldList.split(DELIMITER)[i], issue) + DELIMITER;
             } else {
-                output = output + this.getHREMFieldValue(fieldList.split(delimiter)[i], issue);
+                output = output + this.getHREMFieldValue(fieldList.split(DELIMITER)[i], issue);
             }
 
         }
@@ -368,9 +508,14 @@ public class JiraEmployeesData {
         return output;
     }
 
+    /**
+     *
+     * @param fileName
+     * @throws FileNotFoundException
+     * @throws UnsupportedEncodingException
+     */
     public void exportDataToCSV(String fileName) throws FileNotFoundException, UnsupportedEncodingException {
         PrintWriter writer = new PrintWriter(fileName, "UTF-8");
-
         if (!valuesMap.isEmpty()) {
             writer.println(valuesMap.get("fieldList"));
             Iterator key = valuesMap.keySet().iterator();
@@ -410,7 +555,7 @@ public class JiraEmployeesData {
         //ArrayList toCompare=new ArrayList();
 
         if (primaryHREMID != null) {
-            String[] pr_arr = primaryHREMID.toLowerCase().split(delimiter);
+            String[] pr_arr = primaryHREMID.toLowerCase().split(DELIMITER);
             for (int f = 0; f < pr_arr.length; f++) {
                 al.add(pr_arr[f]);
             }
@@ -455,57 +600,6 @@ public class JiraEmployeesData {
         return result;
     }
 
-    public static void main(String[] args) throws JiraException, FileNotFoundException, IOException, RestException, URISyntaxException, ParseException, Exception {
-        System.out.println("----------------------------------------------------------------");
-        String inputParameter = null;
-        try {
-            inputParameter = args[0];
-            if (!inputParameter.equalsIgnoreCase("-v")) {
-                System.out.println("Hint: use -v to see startup parameters");
-            }
-        } catch (ArrayIndexOutOfBoundsException exception) {
-            // Without output of file
-        }
-
-        Properties prop = new Properties();
-        InputStream input = null;
-        input = new FileInputStream(jiraPropertiesFile);
-
-        // load a properties file
-        prop.load(input);
-        //get the properties value
-        String jiraURL = prop.getProperty("jiraURL");
-        botname = prop.getProperty("userName");
-        String secret = prop.getProperty("jiraSecret");
-        String fileName = prop.getProperty("fileName");
-        if (prop.getProperty("fieldList") != null && !prop.getProperty("fieldList").isEmpty()) {
-            fieldList = prop.getProperty("fieldList");
-        }
-        primaryHREMID = prop.getProperty("primaryHREMID");
-        excludedHREMID = prop.getProperty("excludedHREMID");
-
-        if (inputParameter != null && inputParameter.equalsIgnoreCase("-v")) {
-            //Print properties value
-            System.out.println("Working Directory = " + System.getProperty("user.dir"));
-            System.out.println("############################# jsonparser.properties #################################");
-            System.out.println("jiraURL: " + prop.getProperty("jiraURL"));
-            System.out.println("userName: " + prop.getProperty("userName"));
-            System.out.println("jiraSecret: " + "secret");
-            System.out.println("fileName: " + prop.getProperty("fileName"));
-            System.out.println("fieldList: " + prop.getProperty("fieldList"));
-            System.out.println("primaryHREMID: " + prop.getProperty("primaryHREMID"));
-            System.out.println("excludedHREMID: " + prop.getProperty("excludedHREMID"));
-            System.out.println("######################################################################################");
-            System.out.println("OutputFile: " + fileName);
-        }
-
-        JiraEmployeesData jira = new JiraEmployeesData(jiraURL, secret, fileName);
-        jira.run();
-        input.close();
-        jira.close();
-
-    }
-
     private Map<String, Map<String, String>> getAllDictionaryValues() throws JiraException, IOException, URISyntaxException, RestException, Exception {
         Map<String, Map<String, String>> returnHashMap = new HashMap<String, Map<String, String>>();
         ArrayList all = new ArrayList();
@@ -525,10 +619,10 @@ public class JiraEmployeesData {
 
         for (int k = 0; k < all.size(); k++) {
             Issue issue = (Issue) all.get(k);
-            if (!this.checkInList(issue.getKey(), excludedHREMID, delimiter)) {
+            if (!this.checkInList(issue.getKey(), excludedHREMID, DELIMITER)) {
                 Map<String, String> innerHash = new HashMap<String, String>();
-                String data = new String(this.getFieldValue(objectFieldName, issue));
-                innerHash.put(objectFieldName, data);
+                String data = new String(this.getFieldValue(OBJECTFIELDNAME, issue));
+                innerHash.put(OBJECTFIELDNAME, data);
                 returnHashMap.put(issue.getKey(), innerHash);
             }
 
@@ -537,4 +631,78 @@ public class JiraEmployeesData {
         return returnHashMap;
     }
 
+    private void validate() throws JiraException, URISyntaxException, Exception {
+        test = new JiraEmployeesEvaluationTest(jira);
+        test.validateUserDataToEtalon();
+
+    }
+
+    public static void main(String[] args) throws JiraException, FileNotFoundException, IOException, RestException, URISyntaxException, ParseException, Exception {
+        System.out.println("----------------------------------------------------------------");
+        String inputParameter = null;
+        try {
+            inputParameter = args[0];
+            if (!inputParameter.equalsIgnoreCase("-v")) {
+                System.out.println("Hint: use -v to see startup parameters");
+            }
+        } catch (ArrayIndexOutOfBoundsException exception) {
+            // Without output of file
+        }
+
+        prop = new Properties();
+        InputStream input = null;
+        input = new FileInputStream(JIRAPROPERTIESFILE);
+
+        // load a properties file
+        prop.load(input);
+        //get the properties value
+        String jiraURL = prop.getProperty("jiraURL");
+        botname = prop.getProperty("userName");
+        String secret = prop.getProperty("jiraSecret");
+        fileName = prop.getProperty("fileName");
+        if (prop.getProperty("fieldList") != null && !prop.getProperty("fieldList").isEmpty()) {
+            fieldList = prop.getProperty("fieldList");
+        }
+        primaryHREMID = prop.getProperty("primaryHREMID");
+        excludedHREMID = prop.getProperty("excludedHREMID");
+        etalonFields = prop.getProperty("etalonFields");
+        etalonEmployees = prop.getProperty("etalonEmployees");
+        adminEmail = prop.getProperty("adminEmail");
+        
+        smtpHostServer = prop.getProperty("smtpHostServer");
+        port = prop.getProperty("port");
+        fromAddress = prop.getProperty("fromAddress");
+        mailDebug = prop.getProperty("mailDebug");
+        
+        
+        
+
+        if (inputParameter != null && inputParameter.equalsIgnoreCase("-v")) {
+            //Print properties value
+            System.out.println("Working Directory = " + System.getProperty("user.dir"));
+            System.out.println("############################# jsonparser.properties #################################");
+            System.out.println("jiraURL: " + prop.getProperty("jiraURL"));
+            System.out.println("userName: " + prop.getProperty("userName"));
+            System.out.println("jiraSecret: " + "secret");
+            System.out.println("fileName: " + prop.getProperty("fileName"));
+            System.out.println("fieldList: " + prop.getProperty("fieldList"));
+            System.out.println("primaryHREMID: " + prop.getProperty("primaryHREMID"));
+            System.out.println("excludedHREMID: " + prop.getProperty("excludedHREMID"));
+            System.out.println("etalonFields: " + prop.getProperty("etalonFields"));
+            System.out.println("etalonEmployees: " + prop.getProperty("etalonEmployees"));
+            System.out.println("adminEmail: " + prop.getProperty("adminEmail"));
+            System.out.println("smtpHostServer: " + prop.getProperty("smtpHostServer"));
+            System.out.println("port: " + prop.getProperty("port"));
+            System.out.println("fromAddress: " + prop.getProperty("fromAddress"));
+            System.out.println("mailDebug" + prop.getProperty("mailDebug"));
+            System.out.println("######################################################################################");
+            System.out.println("OutputFile: " + fileName);
+        }
+
+        jira = new JiraEmployeesData(jiraURL, secret, fileName);
+        jira.run();
+        input.close();
+        jira.close();
+
+    }
 }
