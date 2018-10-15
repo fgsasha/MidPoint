@@ -77,6 +77,7 @@ public class JiraEmployeesData {
     Logger log = Logger.getLogger(MantisUtil.class.getName());
     private JiraEmployeesCodeConstant cont;
     private JiraEmployeesEvaluationTest test;
+    private String PRIMARYKEY="jiraEmployeeID";
 
     public String getEtalonFields() {
         return etalonFields;
@@ -122,6 +123,9 @@ public class JiraEmployeesData {
         return fileName;
     }
     
+    String getPrimaryKey() {
+        return PRIMARYKEY;
+    }
     
     /**
      *
@@ -167,7 +171,8 @@ public class JiraEmployeesData {
                 valuesMap.put(issue.getKey(), this.getOneEmployeeRecord(issue, fieldList));
             }
         }
-
+        Map<String, Map<String, String>> resultSet=this.getResultSetFromCSV(valuesMap);
+        test.validateMassUpdate(resultSet);
         this.exportDataToCSV(file);
         System.out.println("Total processed records: " + allEmp.size());
         // display time and date using toString()
@@ -705,4 +710,50 @@ public class JiraEmployeesData {
         jira.close();
 
     }
+
+    private Map<String, Map<String, String>> getResultSetFromCSV(Map valuesMap) {
+        Map<String, Map<String, String>> output = new HashMap<String, Map<String, String>>();
+        String fieldsSet = this.getFieldsList();
+        
+        
+//        String primaryKey = null;
+//        int primaryKeyPosition = 0;
+//        Map fildsPosition = new <Integer, String>HashMap();
+//
+//        String line = br.readLine();
+//        String fieldsCSV = new String(line);
+//        String[] fieldsAr = fieldsCSV.split(DELIMITER, SPLITLENGTH);
+//        for (int i = 0; i < fieldsAr.length; i++) {
+//            if (fieldsAr[i].equalsIgnoreCase(fieldName)) {
+//                primaryKey = fieldsAr[i];
+//                primaryKeyPosition = i;
+//            }
+//            fildsPosition.put(fieldsAr[i], i);
+//        }
+//        if (primaryKey == null) {
+//            throw new VerifyError("Primary key " + fieldName + " not found in input CSV file");
+//        }
+//        int j = 0;
+//        while (line != null) {
+//            if (j > 0) {
+//                Map fld = new <String, String>HashMap();
+//                String[] lineAr = line.split(DELIMITER, SPLITLENGTH);
+//                for (int k = 0; k < lineAr.length; k++) {
+//                    fld.put(fildsPosition.get(k), lineAr[k]);
+//                }
+//                output.put(lineAr[primaryKeyPosition], fld);
+//            }
+//            j = j++;
+//            line = br.readLine();
+//        }
+//        br.close();
+//        if (output.size() == 0) {
+//            return null;
+//        }
+//        return output;
+        
+                return output;
+                
+    }
+
 }

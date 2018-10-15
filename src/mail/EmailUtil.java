@@ -167,7 +167,7 @@ public class EmailUtil {
         return this.pathToAttach;
     }
 
-    EmailUtil() {
+    public EmailUtil() {
     }
 
     public Session Initialization() {

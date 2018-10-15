@@ -6,11 +6,13 @@
 package hrdata;
 
 import hrdata.util.FileUtil;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 import java.util.Properties;
 import javax.mail.MessagingException;
 import javax.mail.Session;
@@ -32,6 +34,7 @@ public class JiraEmployeesEvaluationTest {
     final String MAILSUBJECT = "Jira-Idm Sync Validation error";
     final String[] EMPLOYEESTATUSES = {"Employed", "Dismissed", "Maternity Leave"};
     final String DISSMISALJIRAFIELD = "Dismiss";
+    
 
     public void setJiraInst(JiraEmployeesData jiraInst) {
         this.jed = jiraInst;
@@ -92,13 +95,21 @@ public class JiraEmployeesEvaluationTest {
         return checkResult;
     }
     
-    Boolean validateMassUpdate(){
+    Boolean validateMassUpdate(Map<String, Map<String, String>> inputMap) throws IOException{
     Boolean checkResult = false;
     String fileName=jed.getFileName();
+    String cacheFileName=fileName;
         FileUtil futil = new FileUtil();
-        futil.fileExist(fileName);
+        if(!futil.fileExist(cacheFileName)){
+        checkResult=true;
+        System.out.println("File cache  "+cacheFileName+" have not found. Skip validateMassUpdate evaluation and continue processing of online data");
+        return checkResult;
+        }
+        BufferedReader br=futil.readDataFromFile(cacheFileName);
+        Map<String, Map<String, String>> cachedMap = futil.getCsvToMap(jed.getPrimaryKey(), br);
+        
     
-    //TODO
+    //TODO ibsert input data
     return checkResult;
     }
     
