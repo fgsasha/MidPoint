@@ -52,8 +52,9 @@ public class FileUtil {
             if (fieldsAr[i].equalsIgnoreCase(fieldName)) {
                 primaryKey = fieldsAr[i];
                 primaryKeyPosition = i;
+                fildsPosition.put(i,fieldsAr[i]);
             }
-            fildsPosition.put(fieldsAr[i], i);
+            fildsPosition.put(i,fieldsAr[i]);
         }
         if (primaryKey == null) {
             throw new VerifyError("Primary key " + fieldName + " not found in input CSV file");
@@ -68,7 +69,7 @@ public class FileUtil {
                 }
                 output.put(lineAr[primaryKeyPosition], fld);
             }
-            j = j++;
+            j = j+1;
             line = br.readLine();
         }
         br.close();
@@ -77,7 +78,51 @@ public class FileUtil {
         }
         return output;
     }
+    
+    
+    /**
+     * Get HashMap from String[] of csv format and set primary field for HashMap
+     *
+     * @param fieldName primary field of output HashMap
+     * @param csv input csv data of String[] type
+     * @throws IOException
+     */
+    public Map<String, Map<String, String>> getCsvToMap(String fieldName, String[] csv) throws IOException {
+        Map output = new <String, Map<String, String>>HashMap();
+        String primaryKey = null;
+        int primaryKeyPosition = 0;
+        Map fildsPosition = new <Integer, String>HashMap();
 
+        
+        String fieldsCSV = new String(csv[0]);
+        String[] fieldsAr = fieldsCSV.split(DELIMITER, SPLITLENGTH);
+        for (int i = 0; i < fieldsAr.length; i++) {
+            if (fieldsAr[i].equalsIgnoreCase(fieldName)) {
+                primaryKey = fieldsAr[i];
+                primaryKeyPosition = i;
+                fildsPosition.put(i,fieldsAr[i]);
+            }
+            fildsPosition.put(i,fieldsAr[i]);
+        }
+        if (primaryKey == null) {
+            throw new VerifyError("Primary key " + fieldName + " not found in input CSV array");
+        }
+        
+        for (int j=1; j < csv.length; j++) {
+            
+                Map fld = new <String, String>HashMap();
+                String[] lineAr = csv[j].split(DELIMITER, SPLITLENGTH);
+                for (int k = 0; k < lineAr.length; k++) {
+                    fld.put(fildsPosition.get(k), lineAr[k]);
+                }
+                output.put(lineAr[primaryKeyPosition], fld);
+        }
+        
+        if (output.size() == 0) {
+            return null;
+        }
+        return output;
+    }
     public Boolean fileExist(String fileName) {
         Boolean checkResult = false;
         File f = new File(fileName);

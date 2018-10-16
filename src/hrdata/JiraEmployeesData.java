@@ -5,6 +5,7 @@
  */
 package hrdata;
 
+import hrdata.util.FileUtil;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -15,10 +16,12 @@ import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -41,7 +44,6 @@ public class JiraEmployeesData {
 
     private static String etalonFields;
     private static String etalonEmployees;
-    private static String etalonValuesFile;
     private static JiraEmployeesData jira;
     private static Properties prop;
     private static String adminEmail;
@@ -57,13 +59,16 @@ public class JiraEmployeesData {
     private Map fMap = new HashMap();
     private Map valuesMap = new HashMap();
     private Map<String, Map<String, String>> allDict;
+    static Map<String, Integer> validationThreshold = new <String, Integer>HashMap();
 
-    final String DELIMITER = ",";
+    static final String DELIMITER = ",";
+    static int SPLITLENGTH = -100;
     static final String JIRAPROPERTIESFILE = "jira.properties";
     static final String CODECONSTANTFILEPATH = "jira.constants";
     private static final String HREMPROJECTNAME = "HREM";
     private static final String DISCTPROJECTNAME = "DICT";
     private static final String OBJECTFIELDNAME = "Summary";
+    private static final String THRESHOLDSUFIX = "validationThreshold.";
 
     private static String primaryHREMID;
     static String excludedHREMID;
@@ -77,7 +82,7 @@ public class JiraEmployeesData {
     Logger log = Logger.getLogger(MantisUtil.class.getName());
     private JiraEmployeesCodeConstant cont;
     private JiraEmployeesEvaluationTest test;
-    private String PRIMARYKEY="jiraEmployeeID";
+    private String PRIMARYKEY = "jiraEmployeeID";
 
     public String getEtalonFields() {
         return etalonFields;
@@ -110,7 +115,7 @@ public class JiraEmployeesData {
     public String getFromAddress() {
         return this.fromAddress;
     }
-    
+
     public static void setFieldList(String fieldList) {
         JiraEmployeesData.fieldList = fieldList;
     }
@@ -122,10 +127,16 @@ public class JiraEmployeesData {
     public static String getFileName() {
         return fileName;
     }
-    
+
     String getPrimaryKey() {
         return PRIMARYKEY;
     }
+
+    public static Map<String, Integer> getValidationThreshold() {
+        return validationThreshold;
+    }
+
+    
     
     /**
      *
@@ -171,7 +182,7 @@ public class JiraEmployeesData {
                 valuesMap.put(issue.getKey(), this.getOneEmployeeRecord(issue, fieldList));
             }
         }
-        Map<String, Map<String, String>> resultSet=this.getResultSetFromCSV(valuesMap);
+        Map<String, Map<String, String>> resultSet = this.getResultSetFromOutput(valuesMap);
         test.validateMassUpdate(resultSet);
         this.exportDataToCSV(file);
         System.out.println("Total processed records: " + allEmp.size());
@@ -187,8 +198,7 @@ public class JiraEmployeesData {
 
     /**
      *
-     * @return
-     * @throws JiraException
+     * @return @throws JiraException
      * @throws MessagingException
      * @throws UnsupportedEncodingException
      */
@@ -216,8 +226,7 @@ public class JiraEmployeesData {
 
     /**
      *
-     * @return
-     * @throws JiraException
+     * @return @throws JiraException
      */
     public ArrayList getActiveEmployees() throws JiraException {
         ArrayList all = new ArrayList();
@@ -237,8 +246,7 @@ public class JiraEmployeesData {
 
     /**
      *
-     * @return
-     * @throws JiraException
+     * @return @throws JiraException
      */
     public ArrayList getOneEmployee() throws JiraException {
         ArrayList all = new ArrayList();
@@ -258,8 +266,7 @@ public class JiraEmployeesData {
 
     /**
      *
-     * @return
-     * @throws JiraException
+     * @return @throws JiraException
      */
     public ArrayList getFiredEmployees() throws JiraException {
         ArrayList all = new ArrayList();
@@ -373,8 +380,8 @@ public class JiraEmployeesData {
             output = issue.getIssueType().toString();
         } else if (name.equalsIgnoreCase("Status")) {
             output = issue.getStatus().toString();
-            if(output.equalsIgnoreCase("Employed")){
-            test.validateDismissalDate(issue);
+            if (output.equalsIgnoreCase("Employed")) {
+                test.validateDismissalDate(issue);
             }
         } else if (name.equalsIgnoreCase("Business Email")) {
             output = issue.getField(getFieldKeyByName("Employee").toString()).toString();
@@ -401,7 +408,7 @@ public class JiraEmployeesData {
                 output = cu.getHrIdNumberRev(personId, salt);
             } else {
                 output = "null";
-            }            
+            }
         } else if (!(this.getFieldKeyByName(name) == null || this.getFieldKeyByName(name).isEmpty())) {
 
             log.fine(name + " : " + this.getFieldKeyByName(name));
@@ -486,7 +493,6 @@ public class JiraEmployeesData {
     }
 
     // CSV data type
-
     /**
      *
      * @param issue
@@ -673,14 +679,12 @@ public class JiraEmployeesData {
         etalonFields = prop.getProperty("etalonFields");
         etalonEmployees = prop.getProperty("etalonEmployees");
         adminEmail = prop.getProperty("adminEmail");
-        
+
         smtpHostServer = prop.getProperty("smtpHostServer");
         port = prop.getProperty("port");
         fromAddress = prop.getProperty("fromAddress");
         mailDebug = prop.getProperty("mailDebug");
-        
-        
-        
+        validationThreshold = getValidationMassUpdateThresholds(prop);
 
         if (inputParameter != null && inputParameter.equalsIgnoreCase("-v")) {
             //Print properties value
@@ -700,6 +704,7 @@ public class JiraEmployeesData {
             System.out.println("port: " + prop.getProperty("port"));
             System.out.println("fromAddress: " + prop.getProperty("fromAddress"));
             System.out.println("mailDebug" + prop.getProperty("mailDebug"));
+            System.out.println("validationThreshold" + "...");
             System.out.println("######################################################################################");
             System.out.println("OutputFile: " + fileName);
         }
@@ -711,49 +716,41 @@ public class JiraEmployeesData {
 
     }
 
-    private Map<String, Map<String, String>> getResultSetFromCSV(Map valuesMap) {
+    private Map<String, Map<String, String>> getResultSetFromOutput(Map valuesMap) throws IOException {
         Map<String, Map<String, String>> output = new HashMap<String, Map<String, String>>();
-        String fieldsSet = this.getFieldsList();
-        
-        
-//        String primaryKey = null;
-//        int primaryKeyPosition = 0;
-//        Map fildsPosition = new <Integer, String>HashMap();
-//
-//        String line = br.readLine();
-//        String fieldsCSV = new String(line);
-//        String[] fieldsAr = fieldsCSV.split(DELIMITER, SPLITLENGTH);
-//        for (int i = 0; i < fieldsAr.length; i++) {
-//            if (fieldsAr[i].equalsIgnoreCase(fieldName)) {
-//                primaryKey = fieldsAr[i];
-//                primaryKeyPosition = i;
-//            }
-//            fildsPosition.put(fieldsAr[i], i);
-//        }
-//        if (primaryKey == null) {
-//            throw new VerifyError("Primary key " + fieldName + " not found in input CSV file");
-//        }
-//        int j = 0;
-//        while (line != null) {
-//            if (j > 0) {
-//                Map fld = new <String, String>HashMap();
-//                String[] lineAr = line.split(DELIMITER, SPLITLENGTH);
-//                for (int k = 0; k < lineAr.length; k++) {
-//                    fld.put(fildsPosition.get(k), lineAr[k]);
-//                }
-//                output.put(lineAr[primaryKeyPosition], fld);
-//            }
-//            j = j++;
-//            line = br.readLine();
-//        }
-//        br.close();
-//        if (output.size() == 0) {
-//            return null;
-//        }
-//        return output;
-        
-                return output;
-                
+        Map copyMap = new HashMap(valuesMap);
+        String fieldList = copyMap.get("fieldList").toString();
+        copyMap.remove("fieldList");
+        FileUtil futil = new FileUtil();
+        String[] csv = (String[]) copyMap.values().toArray(new String[copyMap.size()]);
+        List<String> list = Arrays.asList(csv);
+        list = new ArrayList<>(list);
+        list.add(0, fieldList);
+        output = futil.getCsvToMap(PRIMARYKEY, list.toArray(new String[list.size()]));
+        return output;
     }
 
+    private static Map<String, Integer> getValidationMassUpdateThresholds(Properties prop) {
+        Map<String, Integer> output = new <String, Integer>HashMap();
+        String[] fieldArr = fieldList.split(DELIMITER, SPLITLENGTH);
+        for (String field : fieldArr) {
+            if (prop.getProperty(THRESHOLDSUFIX + field)==null || prop.getProperty(THRESHOLDSUFIX + field).isEmpty()) {
+                continue;                
+            } else {
+                try {
+                    int threshold = Integer.parseInt(prop.getProperty(THRESHOLDSUFIX + field));
+                    output.put(field, threshold);
+                } catch (NumberFormatException e) {
+                    throw new NumberFormatException("Thresholds to check validateMassUpdate is not valid. Expected number got string " + e);
+                }
+
+            }
+
+        }
+        if(output.isEmpty()){
+        System.out.println("Thresholds to check validateMassUpdate is not set");
+        return null;
+        }
+        return output;
+    }
 }
