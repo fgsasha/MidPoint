@@ -129,7 +129,9 @@ public class JiraEmployeesEvaluationTest {
         Iterator<String> iter2 = threshold.keySet().iterator();
         while (iter2.hasNext()) {
             String field = iter2.next();
-            System.out.println("Number updates of checked field "+field+": "+result.get(field).size());
+            if (field != null && !result.isEmpty() && result.get(field) != null) {
+                System.out.println("Number updates of checked field " + field + ": " + result.get(field).size());
+            }
             if (!result.containsKey(field) || result.get(field).size() < threshold.get(field)) {
                 result.remove(field);
             }
