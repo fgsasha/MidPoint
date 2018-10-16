@@ -25,10 +25,7 @@ public class FileUtil {
     String DELIMITER = ",";
 
    public  BufferedReader readDataFromFile(String file) throws FileNotFoundException, IOException {
-        BufferedReader br = null;
-        PrintStream out = new PrintStream(new FileOutputStream("file"));
-        String csvFile;
-        br = new BufferedReader(new FileReader(file));
+        BufferedReader br = new BufferedReader(new FileReader(file));
         return br;
     }
 
