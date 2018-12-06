@@ -24,14 +24,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.zip.DataFormatException;
+import hrdata.emc.*;
+
 
 /**
  *
@@ -63,6 +61,7 @@ public class JSONparser {
     private String personId = "99999999999";
     private static Boolean emcIsActiveOnly;
     private static String excludeLogins = null;
+    private Map<String, String> teamsIDName = new HashMap<String, String>();
 
     /**
      *
@@ -720,7 +719,7 @@ public class JSONparser {
             }
 
             // Если нужны все пользователи то тогда есть смысл внести изменения Есть ли у пользователей логины и активны ли они 
-            // TODO В условие нужно будет добавить проверку признача что что логин основной
+            // TODO В условие нужно будет добавить проверку признака что что логин основной
             
                                        //MAIN script//
             
@@ -799,6 +798,13 @@ public class JSONparser {
                             toAdd = "";
 
                         }
+                        
+                        if (keys[p].equalsIgnoreCase("teamId")) {
+                            String teamName = teamsIDName.get(toAdd);
+                            //Замена исходного значения "teamId" 
+                            toAdd = teamName;
+                            toAdd = toAdd.replaceAll(this.delimiter, "");
+                        }                        
                         
                         if (keys[p].equalsIgnoreCase("name")) {
                             //Убираем delimiter из имени
@@ -1403,6 +1409,7 @@ public class JSONparser {
         String hrmURL = prop.getProperty("hrmURL");
         String hrmOUTCSVFile = prop.getProperty("hrmOUTCSVFile");
         String emcURL = prop.getProperty("emcURL");
+        String emcTeamURL = prop.getProperty("emcTeamURL");
         String emcOUTCSVFile = prop.getProperty("emcOUTCSVFile");
         String emcClientCertificateType = prop.getProperty("emcClientCertificateType");
         String emcClientCertificateFile = prop.getProperty("emcClientCertificatePath");
@@ -1422,8 +1429,11 @@ public class JSONparser {
                 System.out.println("hrmURL: " + prop.getProperty("hrmURL").substring(0, 36) + "...");
             }
             System.out.println("hrmOUTCSVFile: " + prop.getProperty("hrmOUTCSVFile"));
-            if (hrmURL != null) {
+            if (emcURL != null) {
                 System.out.println("emcURL: " + prop.getProperty("emcURL").substring(0, 36) + "...");
+            }
+            if(emcTeamURL !=null){
+                System.out.println("emcTeamURL: " + prop.getProperty("emcTeamURL").substring(0, 36) + "...");
             }
             System.out.println("emcOUTCSVFile: " + prop.getProperty("emcOUTCSVFile"));
             System.out.println("emcClientCertificateType: " + prop.getProperty("emcClientCertificateType"));
@@ -1446,14 +1456,15 @@ public class JSONparser {
             System.out.println("hrmURL != null && emcURL!=null");
             initializeClientCertParam(emcClientCertificateType, emcClientCertificateFile, emcClientCertificateSecret);
             json = new JSONparser(direction, emcURL, emcOUTCSVFile, hrmURL, hrmOUTCSVFile, filterFieldName, filterValues);
+            json.getTeamsIdByNames(emcTeamURL);
         } else {
             System.out.println("Not (hrmURL != null && emcURL==null)");
 
             json = new JSONparser(direction, emcJsonFile, hrmJsonFile, filterFieldName, filterValues);
-        }
-
+        }    
+        
         json.run();
-
+        
     }
 
     private Map getValidRecords(Map validationMapActive, Map validationMapDeactivated) {
@@ -1530,4 +1541,12 @@ public class JSONparser {
             return checkResult;
         }
     }
+    
+    void getTeamsIdByNames(String url) throws IOException{
+        FunctionsCall fun = new FunctionsCall();
+        JSONObject output = fun.getTeams(url, null, null, null, null);
+        FunctionUtils.putTeamsNamesToCache(output);
+        teamsIDName=Cache.getTeamsNamesCache();
+    }
+    
 }
