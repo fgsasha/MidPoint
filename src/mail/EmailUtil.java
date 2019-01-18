@@ -39,6 +39,7 @@ public class EmailUtil {
     private String fromDisplayName = "no-reply-User";
     private String pathToAttach = "";
     private String passwordExpiration = "365";
+    private String defaultPolicyDN = "cn=DefaultPasswordPolicy,ou=PwPolicy,dc=example,dc=com";
     private String initialsNotificationInterval = "0,1,2,4,8,16,32,64";
     private String notificationInterval = "1,2,4,8,16,32,64,90,180"; //Countdown 
     private String specialUsers = "";
@@ -64,6 +65,14 @@ public class EmailUtil {
 
     public static String getInitEmailNotifiTemplFile() {
         return initEmailNotifiTemplFile;
+    }
+
+    public String getDefaultPolicyDN() {
+        return defaultPolicyDN;
+    }
+
+    public void setDefaultPolicyDN(String defaultPolicyDN) {
+        this.defaultPolicyDN = defaultPolicyDN;
     }
 
     public void setForceSend(String forceSend) {
@@ -214,6 +223,8 @@ public class EmailUtil {
         this.setPathToAttach(pathToAttach);
         String passwordExpiration = prop.getProperty("passwordExpiration", "365");
         this.setPasswordExpiration(passwordExpiration);
+        String defaultPolicyDN = prop.getProperty("defaultPolicyDN", "cn=DefaultPasswordPolicy,ou=PwPolicy,dc=example,dc=com");
+        this.setDefaultPolicyDN(defaultPolicyDN);
         String initialsNotificationInterval = prop.getProperty("initialsNotificationInterval", "0,1,2,4,8,16,32,64");
         this.setInitialsNotificationInterval(initialsNotificationInterval);
         String notificationInterval = prop.getProperty("notificationInterval", "1,2,4,8,16,32,64,90,180");
@@ -246,6 +257,7 @@ public class EmailUtil {
             System.out.println("fromDisplayName: " + fromDisplayName);
             System.out.println("pathToAttach: " + pathToAttach);
             System.out.println("passwordExpiration: " + passwordExpiration);
+            System.out.println("defaultPolicyDN: " + defaultPolicyDN);
             System.out.println("initialsNotificationInterval: " + initialsNotificationInterval);
             System.out.println("notificationInterval: " + notificationInterval);
             System.out.println("specialUsers: " + specialUsers);

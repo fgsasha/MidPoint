@@ -5,7 +5,6 @@
  */
 package ldap;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -20,12 +19,10 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import javax.mail.MessagingException;
-import javax.mail.Session;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
@@ -39,25 +36,25 @@ import mail.EmailUtil;
  */
 public class PasswordExpirationNotification {
 
+    private DirContext ctx;
     private String adminEmail = "admin@example.com";
     private final String SPECOU = "SPECOU";
     private final String SPECUSER = "SPECUSER";
     private final String INITIALPASS = "INITIALPASS";
     private final String WARNINGPASS = "WARNINGPASS";
+    private final String NEVEREXPIRED= "2147483647";
     private static CharSequence UID = "%UID%";
     private static CharSequence DISPLAYNAME = "%DISPLAYNAME%";
     private static CharSequence PWD = "%PWD%";
     private EmailUtil mail;
     private static String mailPropFile = "mail.properties";
     private static String ldapPropFile = "ldap.properties";
-    
+
 //    private Boolean forceSend = true;
 //    private String debugFilename = "mail_pwd.log";
 //    private static String passNotifTemplFile = "pwdExpEmail.template";
 //    private static String initEmailNotifiTemplFile = "initialEmailForWP.template";
-
-    
- // private static String ldapPropFile = "ldap.properties";
+    // private static String ldapPropFile = "ldap.properties";
 //    //////////////////////
 //    private String passwordExpiration = "365";
 //    private String initialsNotificationInterval = "0,1,2,4,8,16,32,64";
@@ -74,7 +71,9 @@ public class PasswordExpirationNotification {
     }
 
     private void run() throws NamingException, MessagingException, UnsupportedEncodingException, IOException, ParseException {
-        // this.test();
+        NamingEnumeration<SearchResult> pol = getPasswordPolicies();
+        // Set PasswordPolicy pwdMaxAge mapping <DNname, Pwd Age Days>
+        LdapUtils.setPwdMaxAgePolicies(pol);
         NamingEnumeration<SearchResult> sr = getAllLdapAccounts();
         analyzeSearchResult(sr);
         sr.close();
@@ -94,20 +93,43 @@ public class PasswordExpirationNotification {
         return output;
     }
 
-    private void close() {
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    private void close() throws NamingException {
+        if (ctx != null) {
+            ctx.close();
+        }
 
     }
 
     private NamingEnumeration<SearchResult> getAllLdapAccounts() throws IOException, NamingException {
         LdapUtils util = new LdapUtils(ldapPropFile);
-        DirContext ctx = util.connect();
+        if (ctx == null) {
+            ctx = util.connect();
+        }
         LdapFilter lf = new LdapFilter();
         String ldapSearchBase = util.getLdapSearchBase();
-        String searchFilter = util.getLdapSearchFilter();
-        NamingEnumeration<SearchResult> findAccountByAccountName = lf.findAccountsBySearchFiletr(ctx, ldapSearchBase, searchFilter);
+        String searchFilter = util.getAccountsLdapSearchFilter();
+        NamingEnumeration<SearchResult> findAccountByAccountName = lf.findEntriesBySearchFilter(ctx, ldapSearchBase, searchFilter);
         return findAccountByAccountName;
 
+    }
+
+    /**
+     * Read all policies from OpenLdap
+     *
+     * @return result set
+     * @throws IOException
+     * @throws NamingException
+     */
+    private NamingEnumeration<SearchResult> getPasswordPolicies() throws IOException, NamingException {
+        LdapUtils util = new LdapUtils(ldapPropFile);
+        if (ctx == null) {
+            ctx = util.connect();
+        }
+        LdapFilter lf = new LdapFilter();
+        String ldapSearchBase = util.getLdapSearchBase();
+        String searchFilter = util.getPoliciesLdapSearchFilter();
+        NamingEnumeration<SearchResult> findAllPolicies = lf.findEntriesBySearchFilter(ctx, ldapSearchBase, searchFilter);
+        return findAllPolicies;
     }
 
     private void analyzeSearchResult(NamingEnumeration<SearchResult> sr) throws NamingException, ParseException, IOException, MessagingException {
@@ -125,6 +147,11 @@ public class PasswordExpirationNotification {
             String ldapMail = null;
             String uid = null;
             String displayName = null;
+            String pwdPolicySubentry = null;
+
+            if (attributes.get("pwdPolicySubentry") != null) {
+                pwdPolicySubentry = (String) attributes.get("pwdPolicySubentry").get();
+            }
 
             if (attributes.get("pwdChangedTime") != null) {
                 pwdChangedTime = (String) attributes.get("pwdChangedTime").get();
@@ -153,7 +180,7 @@ public class PasswordExpirationNotification {
             } else if (pwdChangedTime != null && !pwdChangedTime.isEmpty() && !pwdChangedTime.equalsIgnoreCase(createTimestamp)) {
                 //send notification about password change
                 System.out.println("Check pwdChangedTime");
-                if (shouldSendMailWithCountdown(pwdChangedTime) || getForceSend()) {
+                if (shouldSendMailWithCountdown(pwdChangedTime, pwdPolicySubentry) || getForceSend()) {
                     System.out.println("Send PWD expiration notification: " + uid + " : " + pwdChangedTime);
                     sendEmailNotification(ldapMail, displayName, uid, pwdChangedTime);
                     putAnalitic(WARNINGPASS, accountDN);
@@ -210,7 +237,20 @@ public class PasswordExpirationNotification {
         return result;
     }
 
-    private boolean shouldSendMailWithCountdown(String pwdChangedTime) throws ParseException {
+//    private boolean shouldSendMailWithCountdown(String pwdChangedTime) throws ParseException {
+//        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+//        Boolean result = false;
+//        // yyyyMMddHHmmssX or yyyyMMddHHmmss'Z'
+//        DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssX");
+//        Date pwdTime = dateFormat.parse(pwdChangedTime);
+//        Date currentDate = new Date();
+//        int diffInDays = (int) ((currentDate.getTime() - pwdTime.getTime()) / (1000 * 60 * 60 * 24));
+//        ArrayList notification = getNotificationInterval();
+//        String passwordExpiration = getpasswordExpiration();
+//        result = checkpasswordExpirationInterval(notification, passwordExpiration, String.valueOf(diffInDays));
+//        return result;
+//    }
+    private boolean shouldSendMailWithCountdown(String pwdChangedTime, String pwdPolicySubentry) throws ParseException {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         Boolean result = false;
         // yyyyMMddHHmmssX or yyyyMMddHHmmss'Z'
@@ -219,7 +259,7 @@ public class PasswordExpirationNotification {
         Date currentDate = new Date();
         int diffInDays = (int) ((currentDate.getTime() - pwdTime.getTime()) / (1000 * 60 * 60 * 24));
         ArrayList notification = getNotificationInterval();
-        String passwordExpiration = getpasswordExpiration();
+        String passwordExpiration = getpasswordExpiration(pwdPolicySubentry);
         result = checkpasswordExpirationInterval(notification, passwordExpiration, String.valueOf(diffInDays));
         return result;
     }
@@ -296,7 +336,7 @@ public class PasswordExpirationNotification {
             writeEmailTofile(mail.getDebugFilename(), mailAddress, uid, displayName, pwdChangedTime);
 
         } else {
-            if  (adminEmail == null) {
+            if (adminEmail == null) {
                 getAdminEmail();
             }
             if (mailAddress == null) {
@@ -490,8 +530,31 @@ public class PasswordExpirationNotification {
         return prop.getProperty(property);
     }
 
-    private String getpasswordExpiration() {
-        return mail.getPasswordExpiration();
+    /**
+     * Get password expiration in days from configured policies by user
+     * pwdPolicySubentry attribute value. If value is null return default
+     * password policy value. If value of pwdMaxAge=0 (Never expired) return 2147483647 days
+     *
+     * @param pwdPolicySubentry - user attribute which stores DN of password
+     * policy
+     * @return - password max age in days
+     */
+    private String getpasswordExpiration(String pwdPolicySubentry) {
+        String output = null;
+        if (LdapUtils.getPwdMaxAgeDaysPolicies() != null) {
+            if (pwdPolicySubentry == null) {
+                output = getpasswordExpirationFromPolicy(mail.getDefaultPolicyDN());
+            } else {
+                output = getpasswordExpirationFromPolicy(pwdPolicySubentry);
+            }
+        }
+        if (output == null) {
+            return mail.getPasswordExpiration();
+        } else if (output.equalsIgnoreCase("0")){
+        return NEVEREXPIRED;
+        } else  {
+            return output;
+        }
     }
 
     private Boolean checkpasswordExpirationInterval(ArrayList expirationNotificationInterval, String passwordExpirationPolicy, String passwordAge) {
@@ -513,5 +576,9 @@ public class PasswordExpirationNotification {
 
     private String getPathToAttach() {
         return mail.getPathToAttach();
+    }
+
+    private String getpasswordExpirationFromPolicy(String policy) {
+        return LdapUtils.getPwdMaxAgeDaysPolicies().get(policy);
     }
 }

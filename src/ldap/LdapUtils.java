@@ -15,7 +15,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.Properties;
 import javax.naming.*;
 import javax.naming.directory.*;
@@ -27,17 +29,14 @@ public class LdapUtils {
     private String bindUser = "uid=administrator,ou=Services,dc=example,dc=com";
     private String cred = "<secret>";
     private String ldapSearchBase = "dc=example,dc=com";
-    private String ldapSearchFilter = "(&(objectClass=inetOrgPerson)(uid=*))";
-
-    public String getLdapSearchBase() {
-        return ldapSearchBase;
-    }
+    private String accountsLdapSearchFilter = "(&(objectClass=inetOrgPerson)(uid=*))";
+    private String policiesLdapSearchFilter = "(objectClass=pwdPolicy)";
+    private Hashtable<String, String> environment = new Hashtable<String, String>();
+    private static Map<String, String> pwdMaxAgeDaysPolicies = new HashMap<>();
 
     public void setLdapSearchBase(String ldapSearchBase) {
         this.ldapSearchBase = ldapSearchBase;
     }
-
-    private Hashtable<String, String> environment = new Hashtable<String, String>();
 
     public void setLdapURL(String ldapURL) {
         this.ldapURL = ldapURL;
@@ -55,8 +54,24 @@ public class LdapUtils {
         this.environment = environment;
     }
 
-    private void setLdapSearchFilter(String ldapSearchFilter) {
-        this.ldapSearchFilter = ldapSearchFilter;
+    private void setAccountsLdapSearchFilter(String accountsLdapSearchFilter) {
+        this.accountsLdapSearchFilter = accountsLdapSearchFilter;
+    }
+
+    public void setPoliciesLdapSearchFilter(String policiesLdapSearchFilter) {
+        this.policiesLdapSearchFilter = policiesLdapSearchFilter;
+    }
+
+    public static void setPwdMaxAgePolicies(NamingEnumeration<SearchResult> policies) throws NamingException {
+        pwdMaxAgeDaysPolicies = getMapPolicyPwdMaxAge(policies);
+    }
+
+    public String getLdapSearchBase() {
+        return ldapSearchBase;
+    }
+
+    public static Map<String, String> getPwdMaxAgeDaysPolicies() {
+        return pwdMaxAgeDaysPolicies;
     }
 
     LdapUtils() {
@@ -86,7 +101,7 @@ public class LdapUtils {
         String ldapSearchBase = prop.getProperty("ldapSearchBase", "dc=example,dc=com");
         this.setLdapSearchBase(ldapSearchBase);
         String ldapSearchFilter = prop.getProperty("ldapSearchFilter", "(&(objectClass=inetOrgPerson)(uid=*))");
-        this.setLdapSearchFilter(ldapSearchFilter);
+        this.setAccountsLdapSearchFilter(ldapSearchFilter);
 
         if (verbose != null && verbose.equalsIgnoreCase("true")) {
             System.out.println("Working Directory = " + System.getProperty("user.dir"));
@@ -136,8 +151,36 @@ public class LdapUtils {
         }
     }
 
-    String getLdapSearchFilter() {
-        return ldapSearchFilter;
+    String getAccountsLdapSearchFilter() {
+        return accountsLdapSearchFilter;
     }
 
+    public String getPoliciesLdapSearchFilter() {
+        return policiesLdapSearchFilter;
+    }
+
+    /**
+     * Return map. DN of password policy as key and pwdMaxAge in days as value
+     * from input SearchResult
+     *
+     * @param policies - LDAP SearchResult
+     * @return DN of password policy as key and pwdMaxAge in days as value
+     * @throws NamingException
+     */
+    static Map<String, String> getMapPolicyPwdMaxAge(NamingEnumeration<SearchResult> policies) throws NamingException {
+        Map<String, String> output = new HashMap<>();
+        int i = 0;
+        while (policies.hasMore()) {
+            SearchResult policy = policies.next();
+            String policyDN = policy.getNameInNamespace();
+            Attributes attributes = (Attributes) policy.getAttributes();
+            String pwdMaxAge = null;
+            if (attributes.get("pwdMaxAge") != null) {
+                pwdMaxAge = (String) attributes.get("pwdMaxAge").get();
+                int pwdMaxAgeDays = (int) (Integer.getInteger(pwdMaxAge) / (60 * 60 * 24));
+                output.put(policyDN, Integer.toString(pwdMaxAgeDays));
+            }
+        }
+        return output;
+    }
 }
