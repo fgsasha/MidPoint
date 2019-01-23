@@ -33,6 +33,7 @@ public class LdapUtils {
     private String policiesLdapSearchFilter = "(objectClass=pwdPolicy)";
     private Hashtable<String, String> environment = new Hashtable<String, String>();
     private static Map<String, String> pwdMaxAgeDaysPolicies = new HashMap<>();
+    private String defaultPolicyDN = "cn=DefaultPasswordPolicy,ou=PwPolicy,dc=example,dc=com";
 
     public void setLdapSearchBase(String ldapSearchBase) {
         this.ldapSearchBase = ldapSearchBase;
@@ -64,6 +65,14 @@ public class LdapUtils {
 
     public static void setPwdMaxAgePolicies(NamingEnumeration<SearchResult> policies) throws NamingException {
         pwdMaxAgeDaysPolicies = getMapPolicyPwdMaxAge(policies);
+    }
+
+    public String getDefaultPolicyDN() {
+        return defaultPolicyDN;
+    }
+
+    public void setDefaultPolicyDN(String defaultPolicyDN) {
+        this.defaultPolicyDN = defaultPolicyDN;
     }
 
     public String getLdapSearchBase() {
@@ -102,6 +111,8 @@ public class LdapUtils {
         this.setLdapSearchBase(ldapSearchBase);
         String ldapSearchFilter = prop.getProperty("ldapSearchFilter", "(&(objectClass=inetOrgPerson)(uid=*))");
         this.setAccountsLdapSearchFilter(ldapSearchFilter);
+        String defaultPolicyDN = prop.getProperty("defaultPolicyDN", "cn=DefaultPasswordPolicy,ou=PwPolicy,dc=example,dc=com");
+        this.setDefaultPolicyDN(defaultPolicyDN);
 
         if (verbose != null && verbose.equalsIgnoreCase("true")) {
             System.out.println("Working Directory = " + System.getProperty("user.dir"));
@@ -112,6 +123,7 @@ public class LdapUtils {
             System.out.println("cred: " + "<secret>");
             System.out.println("ldapSearchBase: " + ldapSearchBase);
             System.out.println("ldapSearchFilter: " + ldapSearchFilter);
+            System.out.println("defaultPolicyDN: " + defaultPolicyDN);
             System.out.println("#############################EOF#################################");
         }
 
@@ -133,7 +145,7 @@ public class LdapUtils {
         try {
             context = new InitialDirContext(environment);
             System.out.println("Connected..");
-            System.out.println(context.getEnvironment());
+            // System.out.println(context.getEnvironment());
 
         } catch (AuthenticationNotSupportedException exception) {
             System.out.println("The authentication is not supported by the server");
@@ -177,7 +189,7 @@ public class LdapUtils {
             String pwdMaxAge = null;
             if (attributes.get("pwdMaxAge") != null) {
                 pwdMaxAge = (String) attributes.get("pwdMaxAge").get();
-                int pwdMaxAgeDays = (int) (Integer.getInteger(pwdMaxAge) / (60 * 60 * 24));
+                int pwdMaxAgeDays = (int) (Integer.parseInt(pwdMaxAge) / (60 * 60 * 24));
                 output.put(policyDN, Integer.toString(pwdMaxAgeDays));
             }
         }

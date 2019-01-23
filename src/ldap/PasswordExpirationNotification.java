@@ -17,10 +17,16 @@ import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.mail.MessagingException;
 import javax.naming.NamingEnumeration;
@@ -37,18 +43,25 @@ import mail.EmailUtil;
 public class PasswordExpirationNotification {
 
     private DirContext ctx;
-    private String adminEmail = "admin@example.com";
+    private LdapUtils util;
+    private String adminEmail = null;
     private final String SPECOU = "SPECOU";
     private final String SPECUSER = "SPECUSER";
     private final String INITIALPASS = "INITIALPASS";
     private final String WARNINGPASS = "WARNINGPASS";
-    private final String NEVEREXPIRED= "2147483647";
+    private final String NEVEREXPIRED = "2812345";
     private static CharSequence UID = "%UID%";
     private static CharSequence DISPLAYNAME = "%DISPLAYNAME%";
     private static CharSequence PWD = "%PWD%";
+    private static CharSequence MESSAGEDAYS = "%MESSAGEDAYS%";
     private EmailUtil mail;
     private static String mailPropFile = "mail.properties";
     private static String ldapPropFile = "ldap.properties";
+    private static Map<String, Integer> expUserDaysMap = new HashMap<>();
+    private static Map<String, String[]> analiticWarn = new HashMap<>();
+    private Map<String, String[]> analiticInit = new HashMap<>();
+    private Map<String, String[]> analiticSpecOu = new HashMap<>();
+    private Map<String, String[]> analiticSpecUsr = new HashMap<>();
 
 //    private Boolean forceSend = true;
 //    private String debugFilename = "mail_pwd.log";
@@ -101,8 +114,8 @@ public class PasswordExpirationNotification {
     }
 
     private NamingEnumeration<SearchResult> getAllLdapAccounts() throws IOException, NamingException {
-        LdapUtils util = new LdapUtils(ldapPropFile);
         if (ctx == null) {
+            util = new LdapUtils(ldapPropFile);
             ctx = util.connect();
         }
         LdapFilter lf = new LdapFilter();
@@ -121,8 +134,8 @@ public class PasswordExpirationNotification {
      * @throws NamingException
      */
     private NamingEnumeration<SearchResult> getPasswordPolicies() throws IOException, NamingException {
-        LdapUtils util = new LdapUtils(ldapPropFile);
         if (ctx == null) {
+            util = new LdapUtils(ldapPropFile);
             ctx = util.connect();
         }
         LdapFilter lf = new LdapFilter();
@@ -134,6 +147,8 @@ public class PasswordExpirationNotification {
 
     private void analyzeSearchResult(NamingEnumeration<SearchResult> sr) throws NamingException, ParseException, IOException, MessagingException {
         int i = 0;
+        int w = 0;
+        int s = 0;
         while (sr.hasMore()) {
 
             SearchResult account = sr.next();
@@ -176,34 +191,36 @@ public class PasswordExpirationNotification {
             if (checkUserSpecialOU(accountDN)) {
                 //For some special containers gather details and send to technical iam mailbox
                 System.out.println("account from special OU : " + accountDN);
-                putAnalitic(SPECOU, accountDN);
+                putAnalitic(SPECOU, accountDN, displayName, uid, ldapMail, createTimestamp, pwdChangedTime, "skip", "account from special OU", pwdPolicySubentry);
             } else if (pwdChangedTime != null && !pwdChangedTime.isEmpty() && !pwdChangedTime.equalsIgnoreCase(createTimestamp)) {
-                //send notification about password change
-                System.out.println("Check pwdChangedTime");
-                if (shouldSendMailWithCountdown(pwdChangedTime, pwdPolicySubentry) || getForceSend()) {
+                //send notification about password change                
+                if (shouldSendMailWithCountdown(uid, pwdChangedTime, pwdPolicySubentry) || getForceSend()) {
                     System.out.println("Send PWD expiration notification: " + uid + " : " + pwdChangedTime);
-                    sendEmailNotification(ldapMail, displayName, uid, pwdChangedTime);
-                    putAnalitic(WARNINGPASS, accountDN);
+                    sendEmailNotification(ldapMail, displayName, uid, expUserDaysMap.get(uid).toString(), getExpirationDate(expUserDaysMap.get(uid)));
+                    putAnalitic(WARNINGPASS, accountDN, displayName, uid, ldapMail, createTimestamp, pwdChangedTime, expUserDaysMap.get(uid).toString(), getExpirationDate(expUserDaysMap.get(uid)), pwdPolicySubentry);
+                    w = w + 1;
                 }
             } else if (checkForSpecialUser(uid)) {
                 //Skip some user from notification about initial password
                 //some special event or notification
-                putAnalitic(SPECUSER, accountDN);
+                putAnalitic(SPECUSER, accountDN, displayName, uid, ldapMail, createTimestamp, pwdChangedTime, "skip", "special account", pwdPolicySubentry);
                 System.out.println("special account was skiped: " + uid);
             } else {
-                //send notification about initial password  
-                System.out.println("Check initialPassword");
-                if (shouldSendInitialMail(createTimestamp) || getForceSend()) {
+                //send notification about initial password                  
+                if ((shouldSendInitialMail(createTimestamp) || getForceSend()) && getSendInitialEmail()) {
                     System.out.println("Send initial mail: " + uid + " : " + createTimestamp);
                     sendInitialEmailNotification(ldapMail, displayName, uid, createTimestamp);
-                    putAnalitic(INITIALPASS, accountDN);
+                    putAnalitic(INITIALPASS, accountDN, displayName, uid, ldapMail, createTimestamp, "", "new", "account with initial password", pwdPolicySubentry);
                     i = i + 1;
                 }
             }
+            s = s + 1;
         }
 
         System.out.println("Send analitic");
         sendAnalitic(adminEmail);
+        System.out.println("Totally analyzed users " + s);
+        System.out.println("Number of warning password expiration mails=" + w);
         System.out.println("Number of initial mails=" + i);
         this.close();
     }
@@ -250,7 +267,7 @@ public class PasswordExpirationNotification {
 //        result = checkpasswordExpirationInterval(notification, passwordExpiration, String.valueOf(diffInDays));
 //        return result;
 //    }
-    private boolean shouldSendMailWithCountdown(String pwdChangedTime, String pwdPolicySubentry) throws ParseException {
+    private boolean shouldSendMailWithCountdown(String uid, String pwdChangedTime, String pwdPolicySubentry) throws ParseException {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         Boolean result = false;
         // yyyyMMddHHmmssX or yyyyMMddHHmmss'Z'
@@ -260,7 +277,9 @@ public class PasswordExpirationNotification {
         int diffInDays = (int) ((currentDate.getTime() - pwdTime.getTime()) / (1000 * 60 * 60 * 24));
         ArrayList notification = getNotificationInterval();
         String passwordExpiration = getpasswordExpiration(pwdPolicySubentry);
+        System.out.println(uid+" pwd will be expired in (policy pwdMaxAge=" + passwordExpiration + "): " + (Integer.parseInt(passwordExpiration) - diffInDays));
         result = checkpasswordExpirationInterval(notification, passwordExpiration, String.valueOf(diffInDays));
+        expUserDaysMap.put(uid, (Integer.parseInt(passwordExpiration) - diffInDays));
         return result;
     }
 
@@ -278,10 +297,10 @@ public class PasswordExpirationNotification {
     }
 
     private Boolean checkInList(ArrayList list, String input) {
-        if (list == null || list.isEmpty()) {
-            return true;
-        }
         Boolean result = false;
+        if (list == null || list.isEmpty()) {
+            return result;
+        }
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).toString().equalsIgnoreCase(input)) {
                 result = true;
@@ -291,9 +310,19 @@ public class PasswordExpirationNotification {
         return result;
     }
 
-    private void putAnalitic(String analiticCase, String account) {
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        //System.out.println("Module putAnalitic is not ready yet");
+    private void putAnalitic(String analiticCase, String accountDN, String displayName, String uid, String mail, String createTimestamp, String pwdChangedTime, String info1, String info2, String pwdPolicySubentry) {
+        String[] inputArray = {analiticCase, accountDN, displayName, uid, mail, createTimestamp, pwdChangedTime, info1, info2, pwdPolicySubentry};
+        if (analiticCase != null) {
+            if (analiticCase.equalsIgnoreCase(WARNINGPASS)) {
+                analiticWarn.put(accountDN, inputArray);
+            } else if (analiticCase.equalsIgnoreCase(INITIALPASS)) {
+                analiticInit.put(accountDN, inputArray);
+            } else if (analiticCase.equalsIgnoreCase(SPECOU)) {
+                analiticSpecOu.put(accountDN, inputArray);
+            } else if (analiticCase.equalsIgnoreCase(SPECUSER)) {
+                analiticSpecUsr.put(accountDN, inputArray);
+            }
+        }
     }
 
     private ArrayList getInitialsNotificationInterval() {
@@ -328,7 +357,7 @@ public class PasswordExpirationNotification {
         return mail.getDebugEmailsToFile();
     }
 
-    private void sendEmailNotification(String mailAddress, String displayName, String uid, String pwdChangedTime) throws IOException, MessagingException {
+    private void sendEmailNotification(String mailAddress, String displayName, String uid, String diffInDays, String pwdChangedTime) throws IOException, MessagingException {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         String debug = getDebugEmails();
         if (debug == null || debug.equalsIgnoreCase("true")) {
@@ -342,7 +371,7 @@ public class PasswordExpirationNotification {
             if (mailAddress == null) {
                 initEmail();
             }
-            sendNotification(mailAddress, displayName, uid, pwdChangedTime);
+            sendNotification(mailAddress, displayName, uid, diffInDays, pwdChangedTime);
         }
 
     }
@@ -384,15 +413,16 @@ public class PasswordExpirationNotification {
         }
     }
 
-    private void sendAnalitic(String adminEmail) throws IOException {
+    private void sendAnalitic(String adminEmail) throws IOException, MessagingException {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         if (adminEmail == null) {
-            getAdminEmail();
+            adminEmail = getAdminEmail();
         }
         if (mail == null) {
             initEmail();
         }
-        System.out.println("Send analitic not supported yet.");
+        mail.sendEmail(mail.Initialization(), adminEmail, "IDM Util: LDAP password analitic information (" + LocalDate.now().toString() + ")", getPasswordAnaliticBody());
+
     }
 
     private Boolean containsInList(ArrayList list, String input) {
@@ -424,15 +454,15 @@ public class PasswordExpirationNotification {
         out.close();
     }
 
-    private String getPasswordNotificationSubject(String uid) throws IOException {
+    private String getPasswordNotificationSubject(String displayName, String uid, String diffInDays, String pwdChangedTime) throws IOException {
         String subj = getPasswordNotificationSubjectTemplate();
-        subj = subj.replace(UID, uid);
+        subj = subj.replace(DISPLAYNAME, displayName).replace(UID, uid).replace(PWD, pwdChangedTime).replace(MESSAGEDAYS, diffInDays);
         return subj;
     }
 
-    private String getPasswordNotificationBody(String displayName, String uid, String pwdChangedTime) throws IOException {
+    private String getPasswordNotificationBody(String displayName, String uid, String diffInDays, String pwdChangedTime) throws IOException {
         String body = getPasswordNotificationBodyTemplate();
-        body = body.replace(DISPLAYNAME, displayName).replace(UID, uid).replace(PWD, pwdChangedTime);
+        body = body.replace(DISPLAYNAME, displayName).replace(UID, uid).replace(PWD, pwdChangedTime).replace(MESSAGEDAYS, diffInDays);
         return body;
     }
 
@@ -466,7 +496,11 @@ public class PasswordExpirationNotification {
         return Boolean.parseBoolean(mail.getForceSend());
     }
 
-    private void sendNotification(String recipient, String displayName, String uid, String pwdChangedTime) throws IOException, MessagingException {
+    public Boolean getSendInitialEmail() {
+        return Boolean.parseBoolean(mail.getSendInitialEmail());
+    }
+
+    private void sendNotification(String recipient, String displayName, String uid, String diffInDays, String pwdChangedTime) throws IOException, MessagingException {
         //https://www.journaldev.com/2532/javamail-example-send-ldapMail-in-java-smtp
 
         // System.out.println("SimpleEmail Start");
@@ -485,7 +519,7 @@ public class PasswordExpirationNotification {
             initEmail();
         }
 
-        mail.sendEmail(mail.Initialization(), toEmail, getPasswordNotificationSubject(uid), getPasswordNotificationBody(displayName, uid, pwdChangedTime));
+        mail.sendEmail(mail.Initialization(), toEmail, getPasswordNotificationSubject(displayName, uid, diffInDays, pwdChangedTime), getPasswordNotificationBody(displayName, uid, diffInDays, pwdChangedTime));
 
     }
 
@@ -500,7 +534,7 @@ public class PasswordExpirationNotification {
     }
 
     public String getAdminEmail() {
-        return adminEmail;
+        return mail.getAdminEmail();
     }
 
     private void initEmail() throws IOException {
@@ -533,7 +567,8 @@ public class PasswordExpirationNotification {
     /**
      * Get password expiration in days from configured policies by user
      * pwdPolicySubentry attribute value. If value is null return default
-     * password policy value. If value of pwdMaxAge=0 (Never expired) return 2147483647 days
+     * password policy value. If value of pwdMaxAge=0 (Never expired) return
+     * 2147483647 days
      *
      * @param pwdPolicySubentry - user attribute which stores DN of password
      * policy
@@ -543,26 +578,26 @@ public class PasswordExpirationNotification {
         String output = null;
         if (LdapUtils.getPwdMaxAgeDaysPolicies() != null) {
             if (pwdPolicySubentry == null) {
-                output = getpasswordExpirationFromPolicy(mail.getDefaultPolicyDN());
+                output = getpasswordExpirationFromPolicy(util.getDefaultPolicyDN());
             } else {
                 output = getpasswordExpirationFromPolicy(pwdPolicySubentry);
             }
         }
         if (output == null) {
             return mail.getPasswordExpiration();
-        } else if (output.equalsIgnoreCase("0")){
-        return NEVEREXPIRED;
-        } else  {
+        } else if (output.equalsIgnoreCase("0")) {
+            return NEVEREXPIRED;
+        } else {
             return output;
         }
     }
 
     private Boolean checkpasswordExpirationInterval(ArrayList expirationNotificationInterval, String passwordExpirationPolicy, String passwordAge) {
+        Boolean result = false;
         if (expirationNotificationInterval == null || expirationNotificationInterval.isEmpty() || passwordExpirationPolicy == null) {
-            return false;
+            return result;
         }
         int policy = Integer.parseInt(passwordExpirationPolicy);
-        Boolean result = false;
         for (int i = 0; i < expirationNotificationInterval.size(); i++) {
             int diff = policy - Integer.parseInt(passwordAge);
             if (Integer.parseInt(expirationNotificationInterval.get(i).toString()) == diff) {
@@ -571,7 +606,6 @@ public class PasswordExpirationNotification {
             }
         }
         return result;
-
     }
 
     private String getPathToAttach() {
@@ -580,5 +614,63 @@ public class PasswordExpirationNotification {
 
     private String getpasswordExpirationFromPolicy(String policy) {
         return LdapUtils.getPwdMaxAgeDaysPolicies().get(policy);
+    }
+
+    private String getExpirationDate(Integer inDays) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Calendar c = Calendar.getInstance();
+        c.setTime(new Date()); // Now use today date.
+        c.add(Calendar.DATE, inDays); // Adding 5 days
+        String output = sdf.format(c.getTime());
+        System.out.println(output);
+        return output;
+    }
+
+    private String getPasswordAnaliticBody() {
+        String msg = null;
+        StringBuilder stringBuild = new StringBuilder();
+        stringBuild.append("IDM Util Password expiration script result:");
+        stringBuild.append("<tr><td>" + "Case" + "</td><td>" + "DN" + "</td><td>" + "displayName" + "</td><td>" + "uid" + "</td><td>" + "mail" + "</td><td>" + "createTimestamp" + "</td><td>" + "pwdChangedTime" + "</td><td>" + "daysToExpiration" + "</td><td>" + "expirationDate" + "</td><td>" + "pwdPolicySubentry" + "</td></tr>");
+
+        if (!analiticWarn.isEmpty()) {
+            Set<String> ks = analiticWarn.keySet();
+            Iterator<String> it = ks.iterator();
+            while (it.hasNext()) {
+                String key = it.next();
+                String[] arr = analiticWarn.get(key);
+                stringBuild.append("<tr><td>" + arr[0] + "</td><td>" + arr[1] + "</td><td>" + arr[2] + "</td><td>" + arr[3] + "</td><td>" + arr[4] + "</td><td>" + arr[5] + "</td><td>" + arr[6] + "</td><td>" + arr[7] + "</td><td>" + arr[8] + "</td><td>" + arr[9] + "</td></tr>");
+            }
+            stringBuild.append("<br>");
+        }
+        if (!analiticInit.isEmpty()) {
+            Set<String> ks = analiticInit.keySet();
+            Iterator<String> it = ks.iterator();
+            while (it.hasNext()) {
+                String key = it.next();
+                String[] arr = analiticInit.get(key);
+                stringBuild.append("<tr><td>" + arr[0] + "</td><td>" + arr[1] + "</td><td>" + arr[2] + "</td><td>" + arr[3] + "</td><td>" + arr[4] + "</td><td>" + arr[5] + "</td><td>" + arr[6] + "</td><td>" + arr[7] + "</td><td>" + arr[8] + "</td><td>" + arr[9] + "</td></tr>");
+            }
+            stringBuild.append("<br>");
+        }
+        if (!analiticSpecUsr.isEmpty()) {
+            Set<String> ks = analiticSpecUsr.keySet();
+            Iterator<String> it = ks.iterator();
+            while (it.hasNext()) {
+                String key = it.next();
+                String[] arr = analiticSpecUsr.get(key);
+                stringBuild.append("<tr><td>" + arr[0] + "</td><td>" + arr[1] + "</td><td>" + arr[2] + "</td><td>" + arr[3] + "</td><td>" + arr[4] + "</td><td>" + arr[5] + "</td><td>" + arr[6] + "</td><td>" + arr[7] + "</td><td>" + arr[8] + "</td><td>" + arr[9] + "</td></tr>");
+            }
+            stringBuild.append("<br>");
+        }
+        if (!analiticSpecOu.isEmpty()) {
+            Set<String> ks = analiticSpecOu.keySet();
+            Iterator<String> it = ks.iterator();
+            while (it.hasNext()) {
+                String key = it.next();
+                String[] arr = analiticSpecOu.get(key);
+                stringBuild.append("<tr><td>" + arr[0] + "</td><td>" + arr[1] + "</td><td>" + arr[2] + "</td><td>" + arr[3] + "</td><td>" + arr[4] + "</td><td>" + arr[5] + "</td><td>" + arr[6] + "</td><td>" + arr[7] + "</td><td>" + arr[8] + "</td><td>" + arr[9] + "</td></tr>");
+            }
+        }
+        return stringBuild.toString();
     }
 }
