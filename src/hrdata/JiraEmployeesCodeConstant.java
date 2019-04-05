@@ -17,22 +17,6 @@ import java.util.Set;
  * Mapping provided by Pavel Avens
  */
 public class JiraEmployeesCodeConstant {
-//static final String summary="Summary";
-//static final String issueKey="Issue key";
-//static final String issueId="Issue id";
-//static final String issueType="Issue Type";
-//static final String status="Status";
-//static final String created="Created";
-//static final String updated="Updated";
-// static final String coManager="Co-MANAGER";
-// static final String dismissal="Dismissal";
-// static final String firstName="First Name";
-// static final String formerName="Former Name";
-// static final String issuedTangibles="Issued Tangibles";
-// static final String lastName="Last Name";
-// static final String middleName="Middle Name";
-//static final String originalForm="Original Form";
-// static final String jiraEmployeeID="jiraEmployeeID";
     private Map<String, String> displaynameNameHMap = new HashMap<String, String>();
     private Map<String, String> constFromFile = new HashMap<String, String>();
     private String fileName;
@@ -61,6 +45,8 @@ public class JiraEmployeesCodeConstant {
     static final String LEVEL8 = "Level 8";
     static final String LEVEL9 = "Level 9";
     static final String TYPE = "Type";
+    static final String DIVISION = "Division";
+    static final String SUBDIVISION = "Subdivision";
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
@@ -90,6 +76,8 @@ public class JiraEmployeesCodeConstant {
         displaynameNameHMap.put(LEVEL8, "level8");
         displaynameNameHMap.put(LEVEL9, "level9");
         displaynameNameHMap.put(TYPE, "type");
+        displaynameNameHMap.put(DIVISION, "division");
+        displaynameNameHMap.put(SUBDIVISION, "Subdivision");
     }
 
     public Map<String, String> getDisplaynameNameHMap() {

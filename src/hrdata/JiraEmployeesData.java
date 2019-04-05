@@ -36,6 +36,7 @@ import net.rcarz.jiraclient.RestException;
 import net.sf.json.JSON;
 import org.json.*;
 
+
 /**
  *
  * @author o.nekriach
@@ -68,6 +69,7 @@ public class JiraEmployeesData {
     private static final String HREMPROJECTNAME = "HREM";
     private static final String DISCTPROJECTNAME = "DICT";
     private static final String OBJECTFIELDNAME = "Summary";
+    private static final String DICTSUMMARYENG = "customfield_20804";
     private static final String THRESHOLDSUFIX = "validationThreshold.";
 
     private static String primaryHREMID;
@@ -76,13 +78,14 @@ public class JiraEmployeesData {
     private static String searchStringAllHREM = "project=" + HREMPROJECTNAME;
     private static String searchStringAllDictionary = "project=" + DISCTPROJECTNAME;
     //see https://jira.dyninno.net/rest/api/2/field
-    private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID,Transliteration,Level 1,Level 2,Level 3,Level 4,Level 5,Level 6,Level 7,Level 8,Level 9,Type";
+    private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Division,Subdivision,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID,Transliteration,Level 1,Level 2,Level 3,Level 4,Level 5,Level 6,Level 7,Level 8,Level 9,Type";
     private static String excludedSummaryFieldValue = "test";
     private String excludedDictionaryFields;
     Logger log = Logger.getLogger(MantisUtil.class.getName());
     private JiraEmployeesCodeConstant cont;
     private JiraEmployeesEvaluationTest test;
     private String PRIMARYKEY = "jiraEmployeeID";
+    private String FIELDS="fields";
 
     public String getEtalonFields() {
         return etalonFields;
@@ -358,7 +361,7 @@ public class JiraEmployeesData {
 
     }
 
-    /**
+    /** Get value of HREM field by name
      *
      * @param name
      * @param issue
@@ -421,7 +424,12 @@ public class JiraEmployeesData {
                     output = new JSONObject(output).getString("name").toString();
                 } else if (output != null && output.startsWith(DISCTPROJECTNAME)) {
                     log.fine("output:" + output);
-                    output = allDict.get(output).get(OBJECTFIELDNAME);
+                    String dictKey=new String(output);
+                    // ENG names from field customfield_20804 will be read first
+                    output = allDict.get(dictKey).get(DICTSUMMARYENG);                    
+                    if(output == null || output.toString().isEmpty()){
+                    output = allDict.get(dictKey).get(OBJECTFIELDNAME);
+                    }
                     if (output == null) {
                         output = "null";
                     }
@@ -433,7 +441,7 @@ public class JiraEmployeesData {
         return output;
     }
 
-    /**
+    /** Get single value of field. To get custom filed value use getValueOfCustomField method
      *
      * @param name
      * @param issue
@@ -450,6 +458,21 @@ public class JiraEmployeesData {
                 //output = new JSONObject(output).getString("value").toString();                
             }
         }
+        output = output.replace(DELIMITER, "").replace("null", "").replace("?", "");
+        return output;
+    }
+    
+        /** Get value of custom field by key from issue field "fields"(array) 
+         * 
+         * @param name
+         * @param issue
+         * @return
+         * @throws IOException
+         * @throws URISyntaxException
+         * @throws Exception 
+         */
+        public String getValueOfCustomField(String name, Issue issue) throws IOException, URISyntaxException, Exception {
+        String output = issue.getField(name).toString();
         output = output.replace(DELIMITER, "").replace("null", "").replace("?", "");
         return output;
     }
@@ -623,8 +646,6 @@ public class JiraEmployeesData {
             Issue issueSR = it.next();
             if (!issueSR.getSummary().split(" ")[0].equalsIgnoreCase(excludedDictionaryFields) || issueSR.getSummary().split(" ").length > 1) {
                 all.add(issueSR);
-//            System.out.println("issueSR: " + issueSR.getKey() + " : "
-//                    + issueSR.getSummary());
             }
         }
 
@@ -634,6 +655,9 @@ public class JiraEmployeesData {
                 Map<String, String> innerHash = new HashMap<String, String>();
                 String data = new String(this.getFieldValue(OBJECTFIELDNAME, issue));
                 innerHash.put(OBJECTFIELDNAME, data);
+                // Get ENG value of summary field
+                String data_eng = new String(this.getValueOfCustomField(DICTSUMMARYENG, issue));
+                innerHash.put(DICTSUMMARYENG, data_eng);
                 returnHashMap.put(issue.getKey(), innerHash);
             }
 
