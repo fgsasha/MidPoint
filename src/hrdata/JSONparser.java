@@ -62,6 +62,10 @@ public class JSONparser {
     private static Boolean emcIsActiveOnly;
     private static String excludeLogins = null;
     private Map<String, String> teamsIDName = new HashMap<String, String>();
+    private String POSTION="position";
+    private String OCCUPATION="occupation";
+    private String NAME="name";
+    private String DEPARTMENT="department";
 
     /**
      *
@@ -725,6 +729,7 @@ public class JSONparser {
             
             if (obj2.isNull("login") == false && (obj2.get("isActive").equals("1") || !emcIsActiveOnly) && checkIfLoginsPrimary(obj2.get("login")) && checkIfNotExcludeLogin(obj2.get("login"))) {
                 String emailDef = "";
+                String department="";
                 String csvStringValues = "";
                 if (obj2.isNull("hrmId") == false) {
                     hrmId = obj2.get("hrmId").toString();
@@ -756,6 +761,19 @@ public class JSONparser {
                             toAdd = emails;
 
                         }
+                        
+                        if (keys[p].equalsIgnoreCase(POSTION)) {
+                            // this.defaultEmail = getMainEmail(toAdd);
+                            department = getDepartment(toAdd);
+                            //Вычисление значения для department
+                        }
+
+                        if (keys[p].equalsIgnoreCase(POSTION)) {
+                            //Вычисление значения для position
+                            toAdd = getPosition(toAdd);
+
+                        }
+                        
 
                         if (keys[p].equalsIgnoreCase("companies") || keys[p].equalsIgnoreCase("companySettings")) {
                             String companies = getCompanies(toAdd);
@@ -845,6 +863,8 @@ public class JSONparser {
                                 String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
                                 String mainEmail = getMainEmail(inputData);
                                 csvStringValues = csvStringValues + this.delimiter + mainEmail;
+                                csvStringValues = csvStringValues + this.delimiter + department;
+                                
                             } 
                         //Добавляем в конец, доролнительные данные
                            else if (obj2.isNull("emails") && obj2.isNull("locationId") && obj2.has("companySettings")) {
@@ -859,9 +879,11 @@ public class JSONparser {
                                 String inputData = getEmailsJSONfromCompanies(obj2.get("companySettings").toString());
                                 String mainEmail = getMainEmail(inputData);
                                 csvStringValues = csvStringValues + this.delimiter + mainEmail;
+                                csvStringValues = csvStringValues + this.delimiter + department;
                             } else {
                                 //add defaultEmail as last value in csv
                                 csvStringValues = csvStringValues + this.delimiter + emailDef;//this.defaultEmail;
+                                csvStringValues = csvStringValues + this.delimiter + department;
                             }
                     }
                 }
@@ -906,11 +928,11 @@ public class JSONparser {
 
         // Для совместимости кода в завимости от версии EMC API и для V9 и для V10 , добавляем в 0 позицию хеш мап дополнительные поля в csvKeysString  
         if (emcApiVersion != null && emcApiVersion.equalsIgnoreCase("V10")) {
-            csvKeysString = csvKeysString + this.delimiter + "emails,locationId,defaultEmail";
+            csvKeysString = csvKeysString + this.delimiter + "emails,locationId,defaultEmail"+this.delimiter+DEPARTMENT;
             returnArray[0] = csvKeysString;
             hmap.replace("csvFieldNames", csvKeysString);
         } else {
-            csvKeysString = csvKeysString + this.delimiter + "defaultEmail";
+            csvKeysString = csvKeysString + this.delimiter + "defaultEmail"+this.delimiter + DEPARTMENT;
             returnArray[0] = csvKeysString;
             hmap.replace("csvFieldNames", csvKeysString);
         }
@@ -1547,6 +1569,34 @@ public class JSONparser {
         JSONObject output = fun.getTeams(url, null, null, null, null);
         FunctionUtils.putTeamsNamesToCache(output);
         teamsIDName=Cache.getTeamsNamesCache();
+    }
+
+    private String getDepartment(String input) {
+        String returtString="";
+        if(input != null && !input.isEmpty() ){
+            JSONObject js = new JSONObject(input);
+            if(!js.isNull(DEPARTMENT)){
+            JSONObject jsdep = new JSONObject(js.get(DEPARTMENT).toString());
+            System.out.println("jsdep="+jsdep.toString());
+            returtString= jsdep.getString(NAME);
+        }
+        
+        
+    }
+        return returtString;
+    }
+
+    private String getPosition(String input) {
+        String returtString="";
+        if(input != null && !input.isEmpty() ){
+            JSONObject js = new JSONObject(input);
+            if(!js.isNull(OCCUPATION)){
+            JSONObject jsdep = new JSONObject(js.get(OCCUPATION).toString());
+            returtString= jsdep.getString(NAME);
+        } 
+        
+    }
+        return returtString;
     }
     
 }
