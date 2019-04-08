@@ -1576,8 +1576,7 @@ public class JSONparser {
         if(input != null && !input.isEmpty() ){
             JSONObject js = new JSONObject(input);
             if(!js.isNull(DEPARTMENT)){
-            JSONObject jsdep = new JSONObject(js.get(DEPARTMENT).toString());
-            System.out.println("jsdep="+jsdep.toString());
+            JSONObject jsdep = new JSONObject(js.get(DEPARTMENT).toString());            
             returtString= jsdep.getString(NAME);
         }
         
