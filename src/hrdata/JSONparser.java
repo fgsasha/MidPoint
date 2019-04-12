@@ -66,6 +66,7 @@ public class JSONparser {
     private String OCCUPATION="occupation";
     private String NAME="name";
     private String DEPARTMENT="department";
+    private String LABEL="label";
 
     /**
      *
@@ -1576,8 +1577,12 @@ public class JSONparser {
         if(input != null && !input.isEmpty() ){
             JSONObject js = new JSONObject(input);
             if(!js.isNull(DEPARTMENT)){
-            JSONObject jsdep = new JSONObject(js.get(DEPARTMENT).toString());            
-            returtString= jsdep.getString(NAME);
+            JSONObject jsdep = new JSONObject(js.get(DEPARTMENT).toString());
+            if(jsdep.getString(LABEL)==null){
+            returtString = jsdep.getString(NAME);
+            } else {
+             returtString = jsdep.getString(LABEL);       
+            }
         }
         
         
@@ -1590,8 +1595,12 @@ public class JSONparser {
         if(input != null && !input.isEmpty() ){
             JSONObject js = new JSONObject(input);
             if(!js.isNull(OCCUPATION)){
-            JSONObject jsdep = new JSONObject(js.get(OCCUPATION).toString());
-            returtString= jsdep.getString(NAME);
+            JSONObject jsdep = new JSONObject(js.get(OCCUPATION).toString());            
+            if(jsdep.getString(LABEL)==null){
+            returtString = jsdep.getString(NAME);
+            } else {
+             returtString = jsdep.getString(LABEL);       
+            }
         } 
         
     }
