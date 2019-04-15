@@ -86,6 +86,7 @@ public class JiraEmployeesData {
     private JiraEmployeesEvaluationTest test;
     private String PRIMARYKEY = "jiraEmployeeID";
     private String FIELDS="fields";
+    private String DEPARTMENT="Department";
 
     public String getEtalonFields() {
         return etalonFields;
@@ -424,11 +425,15 @@ public class JiraEmployeesData {
                     output = new JSONObject(output).getString("name").toString();
                 } else if (output != null && output.startsWith(DISCTPROJECTNAME)) {
                     log.fine("output:" + output);
-                    String dictKey=new String(output);
-                    // ENG names from field customfield_20804 will be read first
-                    output = allDict.get(dictKey).get(DICTSUMMARYENG);                    
-                    if(output == null || output.toString().isEmpty()){
-                    output = allDict.get(dictKey).get(OBJECTFIELDNAME);
+                    String dictKey = new String(output);
+                    if (name.equalsIgnoreCase(DEPARTMENT)) {
+                        output = allDict.get(dictKey).get(OBJECTFIELDNAME);
+                    } else {
+                        // ENG names from field customfield_20804 will be read first
+                        output = allDict.get(dictKey).get(DICTSUMMARYENG);
+                        if (output == null || output.toString().isEmpty()) {
+                            output = allDict.get(dictKey).get(OBJECTFIELDNAME);
+                        }
                     }
                     if (output == null) {
                         output = "null";
