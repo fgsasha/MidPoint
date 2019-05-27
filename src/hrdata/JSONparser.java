@@ -67,6 +67,7 @@ public class JSONparser {
     private String NAME="name";
     private String DEPARTMENT="department";
     private String LABEL="label";
+    private static final String DEFAULTEMAIL="defaultEmail";
 
     /**
      *
@@ -751,20 +752,20 @@ public class JSONparser {
                         }
 
                         if (keys[p].equalsIgnoreCase("emails")) {
-                            // this.defaultEmail = getMainEmail(toAdd);
+                            
                             emailDef = getMainEmail(toAdd);
                             //Вычисление значения для "emailDef"
                         }
 
                         if (keys[p].equalsIgnoreCase("emails")) {
-                            //String mainEmail = getMainEmail(toAdd);
+                            
                             String emails = getEmailsList(toAdd);
                             toAdd = emails;
 
                         }
                         
                         if (keys[p].equalsIgnoreCase(POSTION)) {
-                            // this.defaultEmail = getMainEmail(toAdd);
+                            
                             department = getDepartment(toAdd);
                             //Вычисление значения для department
                         }
@@ -860,9 +861,8 @@ public class JSONparser {
                                 csvStringValues = csvStringValues + this.delimiter + emailList;
                                 //Добавляем пустое значение для locationId
                                 csvStringValues = csvStringValues + this.delimiter + "";
-                                //Вычисляем и вставляем defaulEmail
-                                String inputData = getEmailsJSONfromCompanies(obj2.get("companies").toString());
-                                String mainEmail = getMainEmail(inputData);
+                                //Вычисляем и вставляем defaulEmail                                
+                                String mainEmail = getDefaultEmail(obj2.get("companies").toString());
                                 csvStringValues = csvStringValues + this.delimiter + mainEmail;
                                 csvStringValues = csvStringValues + this.delimiter + department;
                                 
@@ -877,8 +877,7 @@ public class JSONparser {
                                 //Добавляем пустое значение для locationId
                                 csvStringValues = csvStringValues + this.delimiter + "";
                                 //Вычисляем и вставляем defaulEmail
-                                String inputData = getEmailsJSONfromCompanies(obj2.get("companySettings").toString());
-                                String mainEmail = getMainEmail(inputData);
+                                String mainEmail = getDefaultEmail(obj2.get("companySettings").toString());
                                 csvStringValues = csvStringValues + this.delimiter + mainEmail;
                                 csvStringValues = csvStringValues + this.delimiter + department;
                             } else {
@@ -1016,7 +1015,11 @@ public class JSONparser {
         //System.out.println("getCompanies784=" + companies);
         return companies;
     }
-
+    /**
+     * Get main email from list of emails (more frequent email wins). Deprecated
+     * @param input
+     * @return 
+     */
     private String getMainEmail(String input) {
         //System.out.println("getMainEmail"+toAdd);
         String mainEmailStr = "";
@@ -1071,6 +1074,43 @@ public class JSONparser {
             mainEmailStr = mainEmailStr.toLowerCase();
         }
         return mainEmailStr;
+    }
+    /**
+     * Get default email from list of emails (defaultEmail == true)
+     * @param input
+     * @return 
+     */
+    private String getDefaultEmail(String input) {
+        //System.out.println("getMainEmail"+toAdd);
+        if(input.contains(DEFAULTEMAIL)){        
+        String returnString = "";
+        if (input.length() > 2) {
+            String output = "";
+            JSONObject obj = new JSONObject(input);
+            String keySetIternextValue = "";
+            Iterator<String> keySetIter = obj.keys();
+            String[] keys = new String[obj.keySet().size()];
+            int k = 0;
+            while (keySetIter.hasNext()) {
+                keySetIternextValue = keySetIter.next();
+                if (obj.optJSONObject(keySetIternextValue) != null 
+                        && !obj.getJSONObject(keySetIternextValue).optString(DEFAULTEMAIL).equalsIgnoreCase("null") && !obj.getJSONObject(keySetIternextValue).optString(DEFAULTEMAIL).isEmpty() && obj.getJSONObject(keySetIternextValue).optString(DEFAULTEMAIL).toString().equalsIgnoreCase("true")) {
+                    if(!obj.getJSONObject(keySetIternextValue).optString("email").equalsIgnoreCase("null") && !obj.getJSONObject(keySetIternextValue).optString("email").isEmpty()){
+                    output = obj.getJSONObject(keySetIternextValue).optString("email").trim();
+                    } else {
+            String inputData = getEmailsJSONfromCompanies(input);
+            return  getMainEmail(inputData);        
+                    }                
+                }
+            }            
+            returnString = output;
+        }
+        return returnString;            
+        
+        } else {        
+          String inputData = getEmailsJSONfromCompanies(input);
+          return  getMainEmail(inputData);        
+        } 
     }
 
     private String getEmailsList(String input) {
@@ -1439,9 +1479,9 @@ public class JSONparser {
         String emcClientCertificateSecret = prop.getProperty("emcClientCertificateSecret");
         setEmcIsActiveOnly(prop.getProperty("emcIsActiveOnly"));
         setExcludeLogins(prop.getProperty("excludeLogins"));
-
-        if (inputParameter != null && inputParameter.equalsIgnoreCase("-v")) {
-            System.out.println("Working Directory = " + System.getProperty("user.dir"));
+        
+        System.out.println("Working Directory = " + System.getProperty("user.dir"));
+        if (inputParameter != null && inputParameter.equalsIgnoreCase("-v")) {            
             System.out.println("#############################jsonparser.properties#################################");
             System.out.println("direction: " + prop.getProperty("direction"));
             System.out.println("emcJsonFile: " + prop.getProperty("emcJsonFile"));
