@@ -49,7 +49,7 @@ public class EmailUtil {
     private static String passNotifTemplFile = "pwdExpEmail.template";
     private static String initEmailNotifiTemplFile = "initialEmailForWP.template";
     private static String sendInitialEmail = "false";
-    private String adminEmail = null;
+    private static String adminEmail = null;
 
     public String getForceSend() {
         return forceSend;
@@ -121,7 +121,7 @@ public class EmailUtil {
     }
 
     public String getAdminEmail() {
-        return adminEmail;
+        return this.adminEmail;
     }
 
     public void setPasswordExpiration(String passwordExpiration) {
@@ -252,7 +252,7 @@ public class EmailUtil {
         String sendInitialEmail = prop.getProperty("sendInitialEmail", "false");
         setSendInitialEmail(sendInitialEmail);
         String adminEmail = prop.getProperty("adminEmail", null);
-        setAdminEmail(adminEmail);
+        this.setAdminEmail(adminEmail);
 
         if (verbose != null && verbose.equalsIgnoreCase("true")) {
             System.out.println("Working Directory = " + System.getProperty("user.dir"));

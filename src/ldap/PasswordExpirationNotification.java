@@ -44,7 +44,7 @@ public class PasswordExpirationNotification {
 
     private DirContext ctx;
     private LdapUtils util;
-    private String adminEmail = null;
+    private String admin = null;
     private final String SPECOU = "SPECOU";
     private final String SPECUSER = "SPECUSER";
     private final String INITIALPASS = "INITIALPASS";
@@ -218,7 +218,7 @@ public class PasswordExpirationNotification {
         }
 
         System.out.println("Send analitic");
-        sendAnalitic(adminEmail);
+        sendAnalitic(admin);
         System.out.println("Totally analyzed users " + s);
         System.out.println("Number of warning password expiration mails=" + w);
         System.out.println("Number of initial mails=" + i);
@@ -241,6 +241,12 @@ public class PasswordExpirationNotification {
         return result;
     }
 
+    /** Deprecated method +1 day is not added
+     * 
+     * @param pwdChangedTime
+     * @return
+     * @throws ParseException 
+     */
     private boolean shouldSendMail(String pwdChangedTime) throws ParseException {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         Boolean result = false;
@@ -274,7 +280,10 @@ public class PasswordExpirationNotification {
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssX");
         Date pwdTime = dateFormat.parse(pwdChangedTime);
         Date currentDate = new Date();
-        int diffInDays = (int) ((currentDate.getTime() - pwdTime.getTime()) / (1000 * 60 * 60 * 24));
+        // added +1 day because cast to integer of division rounds numbers to lower value       
+       int diffInDays = (int) ((currentDate.getTime() - pwdTime.getTime()) / (1000 * 60 * 60 * 24))+1;
+       
+       
         ArrayList notification = getNotificationInterval();
         String passwordExpiration = getpasswordExpiration(pwdPolicySubentry);
         System.out.println(uid+" pwd will be expired in (policy pwdMaxAge=" + passwordExpiration + "): " + (Integer.parseInt(passwordExpiration) - diffInDays));
@@ -290,6 +299,7 @@ public class PasswordExpirationNotification {
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssX"); //20171218095633Z
         Date pwdTime = dateFormat.parse(createTimestamp);
         Date currentDate = new Date();
+        // should be invistigated Is it necesary to add +1 day to diffInDays
         int diffInDays = (int) ((currentDate.getTime() - pwdTime.getTime()) / (1000 * 60 * 60 * 24));
         ArrayList initNotification = getInitialsNotificationInterval();
         result = checkInList(initNotification, String.valueOf(diffInDays));  // Insert force send email
@@ -365,8 +375,8 @@ public class PasswordExpirationNotification {
             writeEmailTofile(mail.getDebugFilename(), mailAddress, uid, displayName, pwdChangedTime);
 
         } else {
-            if (adminEmail == null) {
-                getAdminEmail();
+            if (admin == null) {
+                admin=getAdminEmail();
             }
             if (mailAddress == null) {
                 initEmail();
@@ -390,10 +400,10 @@ public class PasswordExpirationNotification {
 
         } else {
             if (recipient == null || recipient.isEmpty()) {
-                if (adminEmail == null) {
-                    getAdminEmail();
+                if (admin == null) {
+                    admin=getAdminEmail();
                 }
-                toEmail = adminEmail;
+                toEmail = admin;
             } else {
                 toEmail = recipient;
             }
@@ -415,13 +425,13 @@ public class PasswordExpirationNotification {
 
     private void sendAnalitic(String adminEmail) throws IOException, MessagingException {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        if (adminEmail == null) {
-            adminEmail = getAdminEmail();
-        }
-        if (mail == null) {
+         if (mail == null) {
             initEmail();
         }
-        mail.sendEmail(mail.Initialization(), adminEmail, "IDM Util: LDAP password analitic information (" + LocalDate.now().toString() + ")", getPasswordAnaliticBody());
+        if (adminEmail == null) {
+            admin = getAdminEmail();
+        }
+        mail.sendEmail(mail.Initialization(), admin, "IDM Util: LDAP password analitic information (" + LocalDate.now().toString() + ")", getPasswordAnaliticBody());
 
     }
 
@@ -506,18 +516,18 @@ public class PasswordExpirationNotification {
         // System.out.println("SimpleEmail Start");
         String toEmail = null;
         // System.out.println("recipient: " + recipient);
+        if (mail == null) {
+            initEmail();
+        }
         if (recipient == null || recipient.isEmpty()) {
-            if (adminEmail == null) {
-                getAdminEmail();
+            if (admin == null) {
+                admin=getAdminEmail();
             }
-            toEmail = adminEmail;
+            toEmail = admin;
         } else {
             toEmail = recipient;
         }
 
-        if (mail == null) {
-            initEmail();
-        }
 
         mail.sendEmail(mail.Initialization(), toEmail, getPasswordNotificationSubject(displayName, uid, diffInDays, pwdChangedTime), getPasswordNotificationBody(displayName, uid, diffInDays, pwdChangedTime));
 
@@ -627,10 +637,9 @@ public class PasswordExpirationNotification {
     }
 
     private String getPasswordAnaliticBody() {
-        String msg = null;
         StringBuilder stringBuild = new StringBuilder();
         stringBuild.append("IDM Util Password expiration script result:");
-        stringBuild.append("<tr><td>" + "Case" + "</td><td>" + "DN" + "</td><td>" + "displayName" + "</td><td>" + "uid" + "</td><td>" + "mail" + "</td><td>" + "createTimestamp" + "</td><td>" + "pwdChangedTime" + "</td><td>" + "daysToExpiration" + "</td><td>" + "expirationDate" + "</td><td>" + "pwdPolicySubentry" + "</td></tr>");
+        stringBuild.append("<table><tr><td>" + "Case" + "</td><td>" + "DN" + "</td><td>" + "displayName" + "</td><td>" + "uid" + "</td><td>" + "mail" + "</td><td>" + "createTimestamp" + "</td><td>" + "pwdChangedTime" + "</td><td>" + "daysToExpiration" + "</td><td>" + "expirationDate" + "</td><td>" + "pwdPolicySubentry" + "</td></tr>");
 
         if (!analiticWarn.isEmpty()) {
             Set<String> ks = analiticWarn.keySet();
@@ -671,6 +680,7 @@ public class PasswordExpirationNotification {
                 stringBuild.append("<tr><td>" + arr[0] + "</td><td>" + arr[1] + "</td><td>" + arr[2] + "</td><td>" + arr[3] + "</td><td>" + arr[4] + "</td><td>" + arr[5] + "</td><td>" + arr[6] + "</td><td>" + arr[7] + "</td><td>" + arr[8] + "</td><td>" + arr[9] + "</td></tr>");
             }
         }
+        stringBuild.append("</table>");
         return stringBuild.toString();
     }
 }
