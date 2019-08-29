@@ -34,6 +34,7 @@ import net.rcarz.jiraclient.JiraClient;
 import net.rcarz.jiraclient.JiraException;
 import net.rcarz.jiraclient.RestException;
 import net.sf.json.JSON;
+import net.sf.json.util.JSONUtils;
 import org.json.*;
 
 
@@ -78,7 +79,7 @@ public class JiraEmployeesData {
     private static String searchStringAllHREM = "project=" + HREMPROJECTNAME;
     private static String searchStringAllDictionary = "project=" + DISCTPROJECTNAME;
     //see https://jira.dyninno.net/rest/api/2/field
-    private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Division,Subdivision,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID,Transliteration,Level 1,Level 2,Level 3,Level 4,Level 5,Level 6,Level 7,Level 8,Level 9,Type";
+    private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Division,Subdivision,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID,Transliteration,Level 1,Level 2,Level 3,Level 4,Level 5,Level 6,Level 7,Level 8,Level 9,Type,Reviewal,External";
     private static String excludedSummaryFieldValue = "test";
     private String excludedDictionaryFields;
     Logger log = Logger.getLogger(MantisUtil.class.getName());
@@ -182,6 +183,9 @@ public class JiraEmployeesData {
 
         for (int k = 0; k < allEmp.size(); k++) {
             Issue issue = (Issue) allEmp.get(k);
+            if(issue == null){
+                System.out.println("Null");            
+            }
             if (!this.checkInList(issue.getKey(), excludedHREMID, DELIMITER)) {
                 valuesMap.put(issue.getKey(), this.getOneEmployeeRecord(issue, fieldList));
             }
@@ -334,28 +338,33 @@ public class JiraEmployeesData {
             mapL2 = (Map) mapL1.get(idCodeL1);
             Set keysL2 = mapL2.keySet();
             Iterator keysL2It = keysL2.iterator();
-
+            ArrayList outArray= new ArrayList();
             while (keysL2It.hasNext()) {
-                Issue key = (Issue) keysL2It.next();
-
+                Issue key = (Issue) keysL2It.next();                
                 if (mapL2.containsValue("Employed")) {
                     String desiredKey = this.getDesiredKeyForEnabledUser(mapL2);
                     if (mapL2.get(key).toString().equalsIgnoreCase("Employed") && key.getKey().equals(desiredKey)) {
-                        output.add(key);
+                        outArray.add(key);
                         break;
                     }
                 } else {
-                    //TODO
-                    String recent = this.getRecent(mapL2.values());
+                    //the OLD logic to order by modification date                    
+                    String recent = this.getRecent(mapL2);
                     if (mapL2.get(key).toString().equalsIgnoreCase(recent)) {
-                        output.add(key);
-                        break;
+                        outArray.add(key);                        
                     }
 
                 }
 
             }
-
+            if(!outArray.isEmpty()){
+            if(outArray.size()==1){
+            output.add(outArray.get(0));
+            } else {
+                output.add(getIssueWithLowerHREMNumber(outArray));
+                
+            }
+            }
         }
 
         return output;
@@ -420,7 +429,21 @@ public class JiraEmployeesData {
                 output = issue.getField(getFieldKeyByName(name).toString()).toString();
                 log.fine("output:" + output);
                 if (output.contains("/rest/api/2/customFieldOption")) {
-                    output = new JSONObject(output).getString("value").toString();
+                    //proceed JSONArray
+                    if (output != null && output.startsWith("[")) {
+                        JSONArray ja = new JSONArray(output);
+                        output = null;
+                        for (Object jo : ja) {
+                            if (output == null) {
+                                output = new JSONObject(jo.toString()).get("value").toString();
+                            } else {
+                                output = output + "," + new JSONObject(jo).getString("value").toString();
+                            }
+                        }
+
+                    } else {
+                        output = new JSONObject(output).getString("value").toString();
+                    }
                 } else if (output.contains("/rest/api/2/user?username")) {
                     output = new JSONObject(output).getString("name").toString();
                 } else if (output != null && output.startsWith(DISCTPROJECTNAME)) {
@@ -563,10 +586,11 @@ public class JiraEmployeesData {
 
     }
 
-    private String getRecent(Collection values) throws ParseException {
+    private String getRecent(Map map) throws ParseException {
         String output = "";
         Date outputDate = null;
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        Collection values= map.values();        
         Iterator iter = values.iterator();
         //2017-11-10
         while (iter.hasNext()) {
@@ -773,5 +797,32 @@ public class JiraEmployeesData {
         return null;
         }
         return output;
+    }
+/**
+ *  This method resolves the issue when we have few > 1 Employees with Dissmisal status and the same Dismissal date
+ * 
+ * @param outArray
+ * @return 
+ */
+    private Object getIssueWithLowerHREMNumber(ArrayList outArray) {
+        
+        String output="";
+        Issue outputIssue = null;
+        for (Iterator it = outArray.iterator(); it.hasNext();) {            
+            Issue issue = (Issue) it.next();
+            String issueKey = issue.getKey();
+            if (output.isEmpty()) {
+                output = issueKey;
+                outputIssue=issue;
+            } else {
+                int int1 = Integer.parseInt(output.replaceAll("[^\\d]", ""));
+                int int2 = Integer.parseInt(issueKey.replaceAll("[^\\d]", ""));
+                if (int2 > int1) {
+                    output = issueKey;
+                    outputIssue=issue;
+                }
+            }            
+        }
+        return outputIssue;        
     }
 }
