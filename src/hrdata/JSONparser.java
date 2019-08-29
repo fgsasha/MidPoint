@@ -823,15 +823,17 @@ public class JSONparser {
                             String teamName = teamsIDName.get(toAdd);
                             //Замена исходного значения "teamId" 
                             toAdd = teamName;
-                            toAdd = toAdd.replaceAll(this.delimiter, "");
-                        }                        
+                            if (toAdd != null) {
+                                toAdd = toAdd.replaceAll(this.delimiter, "");
+                            }
+                        }                       
                         
                         if (keys[p].equalsIgnoreCase("name")) {
                             //Убираем delimiter из имени
                             toAdd = toAdd.replaceAll(this.delimiter, "");
                         }
 
-                        if (toAdd.contains(this.delimiter)) {
+                        if (toAdd != null && toAdd.contains(this.delimiter)) {
                             toAdd = toAdd.replaceAll(this.delimiter, replaceSymbol);
                             //System.out.println("FIND!!!");
                         }
@@ -839,9 +841,9 @@ public class JSONparser {
                         if (keys[p].equalsIgnoreCase("extensions") || keys[p].equalsIgnoreCase("settings") || keys[p].equalsIgnoreCase("availableCompanies")) {
                             toAdd = "";
                         }
-
-                        toAdd = toAdd.replace(",", "");   //Добавил подмену "," на пусто в найденных данных
-
+                        if (toAdd != null) {
+                            toAdd = toAdd.replace(",", "");   //Добавил подмену "," на пусто в найденных данных
+                        }
                     }
 
                     //System.out.println("checkResultEMC="+checkResult.toString());    
