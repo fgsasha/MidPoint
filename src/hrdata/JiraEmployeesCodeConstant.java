@@ -49,6 +49,8 @@ public class JiraEmployeesCodeConstant {
     static final String SUBDIVISION = "Subdivision";
     static final String EXTERNAL = "External";
     static final String REVIEWAL = "Reviewal";
+    static final String WPTITLE = "Workplace Title";
+    static final String TRANSFERED = "Transferred";
     
 
     public void setFileName(String fileName) {
@@ -83,6 +85,8 @@ public class JiraEmployeesCodeConstant {
         displaynameNameHMap.put(SUBDIVISION, "Subdivision");
         displaynameNameHMap.put(SUBDIVISION, "External");
         displaynameNameHMap.put(REVIEWAL, "reviewal");
+        displaynameNameHMap.put(WPTITLE, "workplacetitle");
+        displaynameNameHMap.put(TRANSFERED, "transfered");
     }
 
     public Map<String, String> getDisplaynameNameHMap() {

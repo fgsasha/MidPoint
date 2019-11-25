@@ -79,7 +79,7 @@ public class JiraEmployeesData {
     private static String searchStringAllHREM = "project=" + HREMPROJECTNAME;
     private static String searchStringAllDictionary = "project=" + DISCTPROJECTNAME;
     //see https://jira.dyninno.net/rest/api/2/field
-    private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Division,Subdivision,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID,Transliteration,Level 1,Level 2,Level 3,Level 4,Level 5,Level 6,Level 7,Level 8,Level 9,Type,Reviewal,External";
+    private static String fieldList = "Summary,Issue key,Issue id,Issue Type,Status,Created,Updated,Birthday,Business Email,Cell Phone,Co-manager,Company,Department,Division,Subdivision,Dismissal,Employee,Employment,End of Trial,First Name,Former Name,Home Phone,ID Code,Issued Tangibles,Last Name,Manager,Middle Name,Original Form,Personal Email,Position,jiraEmployeeID,Transliteration,Level 1,Level 2,Level 3,Level 4,Level 5,Level 6,Level 7,Level 8,Level 9,Type,Reviewal,External,Workplace Title,Transferred";
     private static String excludedSummaryFieldValue = "test";
     private String excludedDictionaryFields;
     Logger log = Logger.getLogger(MantisUtil.class.getName());
@@ -88,6 +88,7 @@ public class JiraEmployeesData {
     private String PRIMARYKEY = "jiraEmployeeID";
     private String FIELDS="fields";
     private String DEPARTMENT="Department";
+    private String TRANSFERRED="Transferred";
 
     public String getEtalonFields() {
         return etalonFields;
@@ -361,7 +362,7 @@ public class JiraEmployeesData {
             if(outArray.size()==1){
             output.add(outArray.get(0));
             } else {
-                output.add(getIssueWithLowerHREMNumber(outArray));
+                output.add(getIssueWithLowestHREMNumber(outArray));
                 
             }
             }
@@ -585,7 +586,12 @@ public class JiraEmployeesData {
         writer.close();
 
     }
-
+/***
+ *  Return recent date
+ * @param map
+ * @return
+ * @throws ParseException 
+ */
     private String getRecent(Map map) throws ParseException {
         String output = "";
         Date outputDate = null;
@@ -604,7 +610,7 @@ public class JiraEmployeesData {
         return output;
     }
 
-    private String getDesiredKeyForEnabledUser(Map mapL2) {
+    private String getDesiredKeyForEnabledUser(Map mapL2) throws URISyntaxException, Exception {
         String output = "";
         ArrayList al = new ArrayList();
         //ArrayList toCompare=new ArrayList();
@@ -621,12 +627,14 @@ public class JiraEmployeesData {
             Issue issue = (Issue) keysL2It.next();
             if (mapL2.get(issue).toString().equalsIgnoreCase("Employed")) {
                 String issueKey = issue.getKey();
-                if (!al.isEmpty() && al.contains(issueKey.toLowerCase())) {
+                // there is additional logic to proceed transferred users in cases status ==  Employed
+                Boolean isTransferred = isTransferred(issue);
+                if ( (!al.isEmpty() && al.contains(issueKey.toLowerCase())) || isTransferred ) {
                     output = issueKey;
                     break;
                 } else if (output.isEmpty()) {
                     output = issueKey;
-                } else {
+                } else {        
                     int int1 = Integer.parseInt(output.replaceAll("[^\\d]", ""));
                     int int2 = Integer.parseInt(issueKey.replaceAll("[^\\d]", ""));
                     if (int2 < int1) {
@@ -804,7 +812,7 @@ public class JiraEmployeesData {
  * @param outArray
  * @return 
  */
-    private Object getIssueWithLowerHREMNumber(ArrayList outArray) {
+    private Object getIssueWithLowestHREMNumber(ArrayList outArray) {
         
         String output="";
         Issue outputIssue = null;
@@ -824,5 +832,24 @@ public class JiraEmployeesData {
             }            
         }
         return outputIssue;        
+    }
+/***
+ *   This method checks if HREM employee record has date of transfer to other company
+ * @param issue
+ * @return
+ * @throws IOException
+ * @throws URISyntaxException
+ * @throws Exception 
+ */
+    private Boolean isTransferred(Issue issue) throws IOException, URISyntaxException, Exception {
+       Boolean output=false;        
+       String transfered="";
+       transfered = getHREMFieldValue(TRANSFERRED, issue);
+       if (transfered != null && ! transfered.isEmpty()){
+       //System.out.println("transfered="+transfered);
+       output=true;
+       }        
+        return output;       
+        
     }
 }
