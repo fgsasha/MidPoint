@@ -70,6 +70,7 @@ public class JiraEmployeesCodeConstant {
         displaynameNameHMap.put(IDCODE, "idCode");
         displaynameNameHMap.put(MANAGER, "manager");
         displaynameNameHMap.put(PERSONALEMAIL, "personalEmail");
+        displaynameNameHMap.put(POSITION, "position");
         displaynameNameHMap.put(TRANSLITERATION, "transliteration");
         displaynameNameHMap.put(LEVEL1, "level1");
         displaynameNameHMap.put(LEVEL2, "level2");

@@ -686,7 +686,9 @@ public class JiraEmployeesData {
                 innerHash.put(OBJECTFIELDNAME, data);
                 // Get ENG value of summary field
                 String data_eng = new String(this.getValueOfCustomField(DICTSUMMARYENG, issue));
+                if(data_eng !=null && !data_eng.isEmpty()){
                 innerHash.put(DICTSUMMARYENG, data_eng);
+                }
                 returnHashMap.put(issue.getKey(), innerHash);
             }
 
