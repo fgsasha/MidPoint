@@ -169,7 +169,7 @@ public class JiraEmployeesData {
         //Get all Fields (Jira fields schema) 
         String fieldList = this.getFieldsList();
         // Get all Dictionary Values by OBJECTFIELDNAME
-        allDict = this.getAllDictionaryValues();
+        //allDict = this.getAllDictionaryValues();
 
         // Validate Jira Data through Etalon data
         jira.validate();
@@ -663,39 +663,39 @@ public class JiraEmployeesData {
         return result;
     }
 
-    private Map<String, Map<String, String>> getAllDictionaryValues() throws JiraException, IOException, URISyntaxException, RestException, Exception {
-        Map<String, Map<String, String>> returnHashMap = new HashMap<String, Map<String, String>>();
-        ArrayList all = new ArrayList();
-
-        /* Search for issues */
-        Issue.SearchResult sr = ctx.searchIssues(searchStringAllDictionary);
-        System.out.println("Total dictionary records: " + sr.total);
-        Iterator<Issue> it = sr.iterator();
-        while (it.hasNext()) {
-            Issue issueSR = it.next();
-            if (!issueSR.getSummary().split(" ")[0].equalsIgnoreCase(excludedDictionaryFields) || issueSR.getSummary().split(" ").length > 1) {
-                all.add(issueSR);
-            }
-        }
-
-        for (int k = 0; k < all.size(); k++) {
-            Issue issue = (Issue) all.get(k);
-            if (!this.checkInList(issue.getKey(), excludedHREMID, DELIMITER)) {
-                Map<String, String> innerHash = new HashMap<String, String>();
-                String data = new String(this.getFieldValue(OBJECTFIELDNAME, issue));
-                innerHash.put(OBJECTFIELDNAME, data);
-                // Get ENG value of summary field
-                String data_eng = new String(this.getValueOfCustomField(DICTSUMMARYENG, issue));
-                if(data_eng !=null && !data_eng.isEmpty()){
-                innerHash.put(DICTSUMMARYENG, data_eng);
-                }
-                returnHashMap.put(issue.getKey(), innerHash);
-            }
-
-        }
-
-        return returnHashMap;
-    }
+//    private Map<String, Map<String, String>> getAllDictionaryValues() throws JiraException, IOException, URISyntaxException, RestException, Exception {
+//        Map<String, Map<String, String>> returnHashMap = new HashMap<String, Map<String, String>>();
+//        ArrayList all = new ArrayList();
+//
+//        /* Search for issues */
+//        Issue.SearchResult sr = ctx.searchIssues(searchStringAllDictionary);
+//        System.out.println("Total dictionary records: " + sr.total);
+//        Iterator<Issue> it = sr.iterator();
+//        while (it.hasNext()) {
+//            Issue issueSR = it.next();
+//            if (!issueSR.getSummary().split(" ")[0].equalsIgnoreCase(excludedDictionaryFields) || issueSR.getSummary().split(" ").length > 1) {
+//                all.add(issueSR);
+//            }
+//        }
+//
+//        for (int k = 0; k < all.size(); k++) {
+//            Issue issue = (Issue) all.get(k);
+//            if (!this.checkInList(issue.getKey(), excludedHREMID, DELIMITER)) {
+//                Map<String, String> innerHash = new HashMap<String, String>();
+//                String data = new String(this.getFieldValue(OBJECTFIELDNAME, issue));
+//                innerHash.put(OBJECTFIELDNAME, data);
+//                // Get ENG value of summary field
+//                String data_eng = new String(this.getValueOfCustomField(DICTSUMMARYENG, issue));
+//                if(data_eng !=null && !data_eng.isEmpty()){
+//                innerHash.put(DICTSUMMARYENG, data_eng);
+//                }
+//                returnHashMap.put(issue.getKey(), innerHash);
+//            }
+//
+//        }
+//
+//        return returnHashMap;
+//    }
 
     private void validate() throws JiraException, URISyntaxException, Exception {
         test = new JiraEmployeesEvaluationTest(jira);
