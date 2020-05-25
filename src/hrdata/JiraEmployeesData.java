@@ -89,6 +89,7 @@ public class JiraEmployeesData {
     private String FIELDS="fields";
     private String DEPARTMENT="Department";
     private String TRANSFERRED="Transferred";
+    private String CONCURRENTEMPLOYMENT="Concurrent_Employment";
 
     public String getEtalonFields() {
         return etalonFields;
@@ -613,8 +614,8 @@ public class JiraEmployeesData {
     private String getDesiredKeyForEnabledUser(Map mapL2) throws URISyntaxException, Exception {
         String output = "";
         ArrayList al = new ArrayList();
-        //ArrayList toCompare=new ArrayList();
-
+        String concurrentEI="";
+        
         if (primaryHREMID != null) {
             String[] pr_arr = primaryHREMID.toLowerCase().split(DELIMITER);
             for (int f = 0; f < pr_arr.length; f++) {
@@ -624,14 +625,18 @@ public class JiraEmployeesData {
         Set keysL2 = mapL2.keySet();
         Iterator keysL2It = keysL2.iterator();
         while (keysL2It.hasNext()) {
-            Issue issue = (Issue) keysL2It.next();
+            Issue issue = (Issue) keysL2It.next();    
             if (mapL2.get(issue).toString().equalsIgnoreCase("Employed")) {
                 String issueKey = issue.getKey();
+                // ITA-1411 - Add Concurrent Employment logic into Jira IDM connector . Concurrent Employment = null . Field ID: 17300
+                Boolean isConcurrentEmployment = isConcurrentEmployment(issue);
                 // there is additional logic to proceed transferred users in cases status ==  Employed
                 Boolean isTransferred = isTransferred(issue);
                 if ( (!al.isEmpty() && al.contains(issueKey.toLowerCase())) || isTransferred ) {
                     output = issueKey;
                     break;
+                } else if(isConcurrentEmployment){
+                    concurrentEI=issueKey;
                 } else if (output.isEmpty()) {
                     output = issueKey;
                 } else {        
@@ -644,7 +649,9 @@ public class JiraEmployeesData {
 
             }
         }
-
+        if( output.isEmpty() && !concurrentEI.isEmpty()){
+            output=concurrentEI;
+        }
         return output;
     }
 
@@ -853,5 +860,16 @@ public class JiraEmployeesData {
        }        
         return output;       
         
+    }
+
+    private Boolean isConcurrentEmployment(Issue issue) throws IOException, URISyntaxException, Exception {
+       Boolean output=false;        
+       String concurrent="";
+       concurrent = getHREMFieldValue(CONCURRENTEMPLOYMENT, issue);
+       if (concurrent != null && ! concurrent.isEmpty()){
+       //System.out.println("transfered="+transfered);
+       output=true;
+       }        
+        return output;    
     }
 }
