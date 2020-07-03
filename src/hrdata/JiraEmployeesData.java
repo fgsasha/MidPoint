@@ -439,7 +439,11 @@ public class JiraEmployeesData {
                             if (output == null) {
                                 output = new JSONObject(jo.toString()).get("value").toString();
                             } else {
-                                output = output + "," + new JSONObject(jo).getString("value").toString();
+                                output = output;
+                                String value=new JSONObject(jo).optString("value");
+                                if(value != null && !value.equals("")){
+                                output = output+ "," + value;
+                                }
                             }
                         }
 
