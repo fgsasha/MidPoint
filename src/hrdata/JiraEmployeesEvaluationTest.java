@@ -35,7 +35,7 @@ public class JiraEmployeesEvaluationTest {
     private Properties prop;
     int splitLenth = -100;
     final String MAILSUBJECT = "Jira-Idm Sync Validation error";
-    final String[] EMPLOYEESTATUSES = {"Employed", "Dismissed", "Maternity Leave","Sick Leave"};
+    final String[] EMPLOYEESTATUSES = {"Employed", "Dismissed", "Maternity Leave","Sick Leave", "Draft"};
     final String DISSMISALJIRAFIELD = "Dismiss";
     String MASSCHECKFIELDS = "Status,Employee,Dismissal,Business Email";
     final String SUMMARY = "Summary";

@@ -274,25 +274,25 @@ public class JiraEmployeesData {
         return all;
     }
 
-    /**
-     *
-     * @return @throws JiraException
-     */
-    public ArrayList getFiredEmployees() throws JiraException {
-        ArrayList all = new ArrayList();
-
-        ///* Search for issues - only dismissed employees/
-        Issue.SearchResult sr = ctx.searchIssues(searchStringAllHREM + " and Status=Dismissed");
-        System.out.println("Total: " + sr.total);
-        Iterator<Issue> it = sr.iterator();
-        while (it.hasNext()) {
-            Issue issueSR = it.next();
-            all.add(issueSR);
-            System.out.println("issueSR: " + issueSR.getKey() + " : "
-                    + issueSR.getSummary());
-        }
-        return all;
-    }
+//    /**
+//     *
+//     * @return @throws JiraException
+//     */
+//    public ArrayList getFiredEmployees() throws JiraException {
+//        ArrayList all = new ArrayList();
+//
+//        ///* Search for issues - only dismissed employees/
+//        Issue.SearchResult sr = ctx.searchIssues(searchStringAllHREM + " and Status=Dismissed");
+//        System.out.println("Total: " + sr.total);
+//        Iterator<Issue> it = sr.iterator();
+//        while (it.hasNext()) {
+//            Issue issueSR = it.next();
+//            all.add(issueSR);
+//            System.out.println("issueSR: " + issueSR.getKey() + " : "
+//                    + issueSR.getSummary());
+//        }
+//        return all;
+//    }
 
     /**
      *
